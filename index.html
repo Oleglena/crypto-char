@@ -1442,7 +1442,9 @@ function sendMessage() {
 $('msgInput').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
+    isSending = false;
     sendMessage();
+    this.blur();
   }
 });
 
@@ -1500,16 +1502,34 @@ $('logoutBtn').onclick = () => {
   location.reload();
 };
 
-$('sendBtn').onclick = function() {
-  isSending = false; // на всякий случай сбрасываем
+// Надёжная отправка на мобильных: первый тап сразу отправляет, а не только закрывает клавиатуру
+function doSend(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  isSending = false;
   sendMessage();
-};
+  // Убираем фокус с поля, чтобы клавиатура закрылась после отправки
+  if ($('msgInput')) $('msgInput').blur();
+}
 
-$('attachBtn').onclick = function() {
+const sendBtn = $('sendBtn');
+sendBtn.addEventListener('click', doSend);
+sendBtn.addEventListener('touchend', doSend, { passive: false });
+
+$('attachBtn').addEventListener('click', function(e) {
+  e.preventDefault();
   if (!state.activeChat) return;
   isSending = false;
   $('fileInput').click();
-};
+});
+$('attachBtn').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  if (!state.activeChat) return;
+  isSending = false;
+  $('fileInput').click();
+}, { passive: false });
 
 $('fileInput').onchange = e => {
   const f = e.target.files[0];
