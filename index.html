@@ -1502,7 +1502,8 @@ $('logoutBtn').onclick = () => {
   location.reload();
 };
 
-// Надёжная отправка на мобильных: первый тап сразу отправляет, а не только закрывает клавиатуру
+// Максимально надёжная отправка на мобильных.
+// touchstart/pointerdown срабатывают ДО того, как браузер закроет клавиатуру.
 function doSend(e) {
   if (e) {
     e.preventDefault();
@@ -1510,26 +1511,30 @@ function doSend(e) {
   }
   isSending = false;
   sendMessage();
-  // Убираем фокус с поля, чтобы клавиатура закрылась после отправки
-  if ($('msgInput')) $('msgInput').blur();
+  // Клавиатуру закрываем чуть позже, уже после постановки сообщения в очередь
+  setTimeout(function() {
+    if ($('msgInput')) $('msgInput').blur();
+  }, 40);
 }
 
-const sendBtn = $('sendBtn');
-sendBtn.addEventListener('click', doSend);
-sendBtn.addEventListener('touchend', doSend, { passive: false });
+var sendBtnEl = $('sendBtn');
+sendBtnEl.addEventListener('pointerdown', doSend);
+sendBtnEl.addEventListener('touchstart', doSend, { passive: false });
+sendBtnEl.addEventListener('click', doSend);
 
-$('attachBtn').addEventListener('click', function(e) {
-  e.preventDefault();
+function doAttach(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   if (!state.activeChat) return;
   isSending = false;
   $('fileInput').click();
-});
-$('attachBtn').addEventListener('touchend', function(e) {
-  e.preventDefault();
-  if (!state.activeChat) return;
-  isSending = false;
-  $('fileInput').click();
-}, { passive: false });
+}
+var attachBtnEl = $('attachBtn');
+attachBtnEl.addEventListener('pointerdown', doAttach);
+attachBtnEl.addEventListener('touchstart', doAttach, { passive: false });
+attachBtnEl.addEventListener('click', doAttach);
 
 $('fileInput').onchange = e => {
   const f = e.target.files[0];
