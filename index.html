@@ -1086,8 +1086,11 @@ function renderLocalMsgs() {
   $('messages').innerHTML = html;
   $('messages').scrollTop = $('messages').scrollHeight;
 
-  // Навешиваем обработчики на фото
+  // Навешиваем обработчики на фото (один раз на каждый элемент)
   document.querySelectorAll('.photo-wrap').forEach(wrap => {
+    if (wrap.dataset.bound) return; // уже навесили
+    wrap.dataset.bound = '1';
+
     const img = wrap.querySelector('.msg-photo');
     const menuBtn = wrap.querySelector('.photo-menu-btn');
     if (!img || !menuBtn) return;
@@ -1096,28 +1099,20 @@ function renderLocalMsgs() {
     menuBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      // Скрываем все остальные меню
       document.querySelectorAll('.photo-wrap.show-actions').forEach(w => {
         if (w !== wrap) w.classList.remove('show-actions');
       });
       wrap.classList.toggle('show-actions');
     });
 
-    // Клик вне меню — скрыть
-    document.addEventListener('click', function hideMenus(e) {
-      if (!wrap.contains(e.target)) {
-        wrap.classList.remove('show-actions');
-      }
-    });
-
-    // Двойной тап по фото — полноэкранный просмотр
+    // Двойной тап / двойной клик — полноэкранный просмотр
     let tapCount = 0;
     let tapTimer = null;
     img.addEventListener('touchend', function(e) {
       e.preventDefault();
       tapCount++;
       if (tapCount === 1) {
-        tapTimer = setTimeout(() => { tapCount = 0; }, 300);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 280);
       } else if (tapCount === 2) {
         clearTimeout(tapTimer);
         tapCount = 0;
@@ -1125,13 +1120,19 @@ function renderLocalMsgs() {
       }
     }, { passive: false });
 
-    // Для десктопа двойной клик
     img.addEventListener('dblclick', function(e) {
       e.preventDefault();
       openFullscreen(img.src);
     });
   });
 }
+
+// Глобальный обработчик — закрывать меню при клике вне фото
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.photo-wrap')) {
+    document.querySelectorAll('.photo-wrap.show-actions').forEach(w => w.classList.remove('show-actions'));
+  }
+});
 
 function openFullscreen(src) {
   $('fullscreen-img').src = src;
@@ -1286,7 +1287,13 @@ async function processQueue() {
 
   isSending = true;
   const sendBtn = $('sendBtn');
-  sendBtn.classList.add('sending');
+  if (sendBtn) sendBtn.classList.add('sending');
+
+  // Страховка: через 25 секунд принудительно разблокируем
+  const safety = setTimeout(() => {
+    isSending = false;
+    if (sendBtn) sendBtn.classList.remove('sending');
+  }, 25000);
 
   const item = sendQueue.shift();
 
@@ -1306,11 +1313,12 @@ async function processQueue() {
     toast('Ошибка сети. Попробуем ещё раз...');
     sendQueue.unshift(item);
   } finally {
+    clearTimeout(safety);
     isSending = false;
-    sendBtn.classList.remove('sending');
+    if (sendBtn) sendBtn.classList.remove('sending');
 
     if (sendQueue.length > 0) {
-      setTimeout(processQueue, 400);
+      setTimeout(processQueue, 500);
     }
   }
 }
@@ -1398,10 +1406,14 @@ $('logoutBtn').onclick = () => {
   location.reload();
 };
 
-$('sendBtn').onclick = sendMessage;
+$('sendBtn').onclick = function() {
+  isSending = false; // на всякий случай сбрасываем
+  sendMessage();
+};
 
-$('attachBtn').onclick = () => {
+$('attachBtn').onclick = function() {
   if (!state.activeChat) return;
+  isSending = false;
   $('fileInput').click();
 };
 
