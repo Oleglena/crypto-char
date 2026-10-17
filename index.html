@@ -238,7 +238,7 @@ const api = {
     if(!res.ok) {
        let err = await res.text();
        console.error('Create error:', err);
-       throw new Error('Ошибка создания');
+       throw new Error('Ошибка создания Gist');
     }
     return (await res.json()).id;
   },
@@ -256,7 +256,7 @@ const api = {
     if(!res.ok) {
        let err = await res.text();
        console.error('Update error:', err);
-       throw new Error('Ошибка сети');
+       throw new Error('Ошибка сети (PATCH)');
     }
   }
 };
@@ -285,6 +285,10 @@ async function createContact() {
     let newSeed = Math.random().toString(36).substring(2, 12);
     toast('Создаём чат...');
     let gistId = await api.createGist();
+    
+    // Ждем 1.5 секунды, чтобы GitHub успел создать Gist
+    await new Promise(r => setTimeout(r, 1500)); 
+    
     let inviteCode = btoa(JSON.stringify({ id: gistId, key: newSeed }));
     
     state.contacts.push({ name, id: gistId, key: newSeed });
@@ -294,6 +298,7 @@ async function createContact() {
     $('inviteModal').classList.add('show');
     $('addModal').classList.remove('show');
     $('newContactName').value = '';
+    toast('Контакт создан!');
   } catch(e) { toast('Ошибка: ' + e.message); }
 }
 
@@ -398,7 +403,7 @@ async function sendMessage() {
     
     await loadMessages();
   } catch(e) {
-    toast('Ошибка отправки. Возможно, нет прав у токена.');
+    toast('Ошибка: ' + e.message);
     console.error(e);
   } finally {
     $('msgInput').disabled = false;
