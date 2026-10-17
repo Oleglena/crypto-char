@@ -236,7 +236,8 @@ const api = {
     return data.files && data.files['chat.txt'] ? data.files['chat.txt'].content : '';
   },
   updateGist: async (id, content) => {
-    await fetch(`https://api.github.com/gists/${id}`, { method: 'PATCH', headers: api.headers(), body: JSON.stringify({ files: { 'chat.txt': { content } } }) });
+    let res = await fetch(`https://api.github.com/gists/${id}`, { method: 'PATCH', headers: api.headers(), body: JSON.stringify({ files: { 'chat.txt': { content } } }) });
+    if(!res.ok) throw new Error('Ошибка сети');
   }
 };
 
@@ -356,19 +357,36 @@ async function loadMessages() {
   } catch(e) { console.error(e); }
 }
 
+// --- ОТПРАВКА ---
 async function sendMessage() {
   let text = $('msgInput').value.trim();
   if(!text || !state.activeChat) return;
-  $('msgInput').value = '';
   
-  let msg = { author: state.user, type: 'text', text, ts: Date.now() };
-  let cipher = enc(JSON.stringify(msg), state.activeChat.key);
+  // Блокируем кнопку от двойных нажатий
+  $('msgInput').disabled = true;
+  $('sendBtn').disabled = true;
+  $('msgInput').value = ''; 
   
-  let current = await api.getGist(state.activeChat.id);
-  if(current === 'init') current = '';
-  let newContent = current ? current + '\n' + cipher : cipher;
-  await api.updateGist(state.activeChat.id, newContent);
-  loadMessages();
+  try {
+    let msg = { author: state.user, type: 'text', text, ts: Date.now() };
+    let cipher = enc(JSON.stringify(msg), state.activeChat.key);
+    
+    // ЖДЕМ получения текущих сообщений
+    let current = await api.getGist(state.activeChat.id);
+    if(current === 'init') current = '';
+    
+    let newContent = current ? current + '\n' + cipher : cipher;
+    await api.updateGist(state.activeChat.id, newContent);
+    
+    await loadMessages();
+  } catch(e) {
+    toast('Ошибка отправки. Проверьте токен.');
+    console.error(e);
+  } finally {
+    $('msgInput').disabled = false;
+    $('sendBtn').disabled = false;
+    $('msgInput').focus();
+  }
 }
 
 // --- СОБЫТИЯ ---
