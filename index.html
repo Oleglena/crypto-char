@@ -517,62 +517,66 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 210px;
-  padding: 4px 2px 6px;
+  min-width: 200px;
+  padding: 2px 0 4px;
 }
 .voice-play-btn {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  font-size: 14px;
+  background: #ffffff;
+  color: #075e54;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   font-weight: bold;
+}
+.msg-item.in .voice-play-btn {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0,168,132,0.4);
 }
 .msg-item.out .voice-play-btn {
   background: #ffffff;
-  color: #2aabee;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}
-.msg-item.in .voice-play-btn {
-  background: #2aabee;
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(42,171,238,0.35);
+  color: #075e54;
 }
 .voice-wave {
   flex: 1;
-  height: 32px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 2.5px;
-  min-width: 100px;
+  gap: 2px;
+  min-width: 90px;
 }
 .voice-bar {
   width: 3px;
-  border-radius: 1.5px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.45);
   flex-shrink: 0;
 }
-.msg-item.out .voice-bar {
-  background: rgba(255,255,255,0.55);
-}
 .msg-item.in .voice-bar {
-  background: rgba(42,171,238,0.35);
+  background: rgba(0,0,0,0.2);
 }
-.msg-item.out .voice-bar.played {
+.msg-item.out .voice-bar {
+  background: rgba(255,255,255,0.5);
+}
+.voice-bar.played {
   background: #ffffff !important;
 }
 .msg-item.in .voice-bar.played {
-  background: #2aabee !important;
+  background: var(--accent) !important;
 }
 .voice-duration {
   font-size: 12px;
   font-weight: 600;
-  min-width: 38px;
+  min-width: 36px;
   text-align: right;
+  opacity: 0.95;
 }
 .msg-item.out .voice-duration {
   color: rgba(255,255,255,0.95);
@@ -581,13 +585,9 @@ textarea {
   color: var(--text-dim);
 }
 #micBtn.recording {
-  background: #ff4757 !important;
-  color: #fff !important;
+  color: #ff4757 !important;
   border-color: #ff4757 !important;
-  transform: scale(1.1);
-}
-#recordingBar.active {
-  display: flex !important;
+  animation: blink 1s infinite;
 }
 
 .modal {
@@ -797,11 +797,11 @@ textarea {
       </div>
       <button class="btn-send" id="sendBtn">➤</button>
     </div>
-    <div id="recordingBar" style="display:none; padding:12px 14px; background:var(--panel2); align-items:center; gap:12px; border-top:1px solid var(--border);">
-      <div id="recDot" style="width:12px;height:12px;border-radius:50%;background:#ff4757;animation:blink 1s infinite;flex-shrink:0;"></div>
-      <span id="recTime" style="font-size:16px;font-weight:700;min-width:48px;color:#ff4757;">0:00</span>
-      <span style="font-size:13px;color:var(--text-dim);flex:1;">Отпустите, чтобы отправить</span>
+    <div id="recordingBar" style="display:none; padding:10px 14px; background:var(--panel2); align-items:center; gap:12px; border-top:1px solid var(--border);">
+      <div id="recDot" style="width:12px;height:12px;border-radius:50%;background:#ff4757;animation:blink 1s infinite;"></div>
+      <span id="recTime" style="font-size:15px;font-weight:600;min-width:48px;">0:00</span>
       <button id="recCancel" style="background:var(--panel3);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;width:auto;">Отмена</button>
+      <button id="recSend" style="background:var(--accent);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;width:auto;margin-left:auto;">Отправить</button>
     </div>
   </div>
 
@@ -1700,62 +1700,42 @@ async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioChunks = [];
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-      : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
-    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-    mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.start(100);
+    mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.start(200);
     isRecording = true;
     recStartTime = Date.now();
-    const bar = $('recordingBar');
-    if (bar) {
-      bar.style.display = 'flex';
-      bar.classList.add('active');
-    }
+    $('recordingBar').style.display = 'flex';
     $('micBtn').classList.add('recording');
-    recTimer = setInterval(updateRecTime, 200);
+    recTimer = setInterval(updateRecTime, 250);
     updateRecTime();
   } catch (err) {
     console.error(err);
     toast('Нет доступа к микрофону');
-    isRecording = false;
   }
 }
 
 function stopRecording(send) {
-  if (!mediaRecorder) return;
-  const wasRecording = isRecording;
+  if (!isRecording || !mediaRecorder) return;
   isRecording = false;
   clearInterval(recTimer);
-  const bar = $('recordingBar');
-  if (bar) {
-    bar.style.display = 'none';
-    bar.classList.remove('active');
-  }
+  $('recordingBar').style.display = 'none';
   $('micBtn').classList.remove('recording');
 
-  if (!wasRecording) return;
-
-  const duration = (Date.now() - recStartTime) / 1000;
-  const mimeType = mediaRecorder.mimeType || 'audio/webm';
-
   mediaRecorder.onstop = () => {
-    try {
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
-    } catch (_) {}
-
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
     if (!send || audioChunks.length === 0) {
       audioChunks = [];
       return;
     }
-    if (duration < 0.4) {
-      audioChunks = [];
-      toast('Слишком короткое');
+    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+    const duration = (Date.now() - recStartTime) / 1000;
+    audioChunks = [];
+
+    if (duration < 0.5) {
+      toast('Слишком короткое сообщение');
       return;
     }
-
-    const blob = new Blob(audioChunks, { type: mimeType });
-    audioChunks = [];
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -1775,45 +1755,16 @@ function stopRecording(send) {
     };
     reader.readAsDataURL(blob);
   };
-
-  try {
-    if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  } catch (_) {}
+  mediaRecorder.stop();
 }
 
-// Зажал — запись, отпустил — отправка (как в Telegram)
-const micEl = $('micBtn');
-let recCanceled = false;
-
-function onMicDown(e) {
+$('micBtn').addEventListener('click', function(e) {
   e.preventDefault();
-  e.stopPropagation();
-  if (!state.activeChat || isRecording) return;
-  recCanceled = false;
+  if (isRecording) return;
   startRecording();
-}
-function onMicUp(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  if (!isRecording) return;
-  stopRecording(!recCanceled);
-}
-function onMicCancel() {
-  recCanceled = true;
-  stopRecording(false);
-}
-
-micEl.addEventListener('touchstart', onMicDown, { passive: false });
-micEl.addEventListener('touchend', onMicUp, { passive: false });
-micEl.addEventListener('touchcancel', onMicCancel);
-micEl.addEventListener('mousedown', onMicDown);
-micEl.addEventListener('mouseup', onMicUp);
-micEl.addEventListener('mouseleave', function() {
-  if (isRecording) onMicCancel();
 });
-
-if ($('recCancel')) $('recCancel').onclick = () => { recCanceled = true; stopRecording(false); };
-if ($('recSend')) $('recSend').onclick = () => stopRecording(true);
+$('recCancel').onclick = () => stopRecording(false);
+$('recSend').onclick = () => stopRecording(true);
 
 // Воспроизведение голосовых
 let currentAudio = null;
