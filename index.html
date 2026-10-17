@@ -7,7 +7,7 @@
 <title>Secure Contacts</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
-:root {
+:root, [data-theme="dark"] {
   --bg:#0b0e11;
   --panel:#151921;
   --panel2:#20262d;
@@ -18,6 +18,18 @@
   --border:#30363d;
   --bubble-in:#202c33;
   --bubble-out:#005c4b;
+}
+[data-theme="light"] {
+  --bg:#f0f2f5;
+  --panel:#ffffff;
+  --panel2:#f0f2f5;
+  --panel3:#e4e6eb;
+  --accent:#00a884;
+  --text:#050505;
+  --text-dim:#65676b;
+  --border:#ced0d4;
+  --bubble-in:#ffffff;
+  --bubble-out:#d9fdd3;
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin:0; padding:0; height:100%; overflow:hidden; height:100dvh; }
@@ -155,8 +167,18 @@ button:active { transform:scale(0.97); opacity:0.9; }
   font-size:14px;
   background:var(--accent);
   border-radius:8px;
+  color:#fff;
 }
 .btn-icon:active { background:#008069; }
+#settingsBtn {
+  background:#3b82f6 !important;
+  font-size:20px;
+  padding:9px 15px;
+  box-shadow:0 2px 8px rgba(59,130,246,0.45);
+}
+#settingsBtn:active {
+  background:#2563eb !important;
+}
 #contacts-list {
   flex:1;
   overflow-y:auto;
@@ -683,6 +705,14 @@ textarea {
         </div>
       </div>
 
+      <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <label style="padding:0;">Тема оформления</label>
+        <div style="display:flex; gap:10px;">
+          <button type="button" id="themeDarkBtn" style="flex:1; padding:12px; background:var(--panel3); border:2px solid var(--accent); border-radius:10px; font-size:14px;">🌑 Тёмная</button>
+          <button type="button" id="themeLightBtn" style="flex:1; padding:12px; background:var(--panel3); border:2px solid transparent; border-radius:10px; font-size:14px;">☀️ Светлая</button>
+        </div>
+      </div>
+
       <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:8px; border-bottom:none;">
         <label style="padding:0;">Мелодия</label>
         <button id="pickSoundBtn" style="background:var(--panel3); border:1px solid var(--border); padding:10px; font-size:13px;">Выбрать из файлов</button>
@@ -692,7 +722,7 @@ textarea {
 
       <div style="margin-top:15px;">
         <label style="font-size:14px; display:block; margin-bottom:8px;">Высота поля ввода:</label>
-        <select id="inputHeightSelect" style="width:100%; padding:12px; background:var(--panel3); color:white; border:1px solid var(--border); border-radius:8px;">
+        <select id="inputHeightSelect" style="width:100%; padding:12px; background:var(--panel3); color:var(--text); border:1px solid var(--border); border-radius:8px;">
           <option value="38">Маленькое</option>
           <option value="70">Среднее</option>
           <option value="120">Большое</option>
@@ -905,6 +935,25 @@ $('inputHeightSelect').addEventListener('change', e => {
   $('msgInput').style.height = e.target.value + 'px';
   localStorage.setItem('cc_height', e.target.value);
 });
+
+// ===== Тема =====
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('cc_theme', theme);
+  const darkBtn = $('themeDarkBtn');
+  const lightBtn = $('themeLightBtn');
+  if (darkBtn && lightBtn) {
+    if (theme === 'dark') {
+      darkBtn.style.borderColor = 'var(--accent)';
+      lightBtn.style.borderColor = 'transparent';
+    } else {
+      lightBtn.style.borderColor = 'var(--accent)';
+      darkBtn.style.borderColor = 'transparent';
+    }
+  }
+}
+$('themeDarkBtn').onclick = () => applyTheme('dark');
+$('themeLightBtn').onclick = () => applyTheme('light');
 
 const api = {
   headers: () => ({
@@ -1492,6 +1541,10 @@ window.addEventListener('DOMContentLoaded', () => {
     $('inputHeightSelect').value = localStorage.getItem('cc_height');
     $('msgInput').style.height = localStorage.getItem('cc_height') + 'px';
   }
+
+  // Восстановление темы
+  const savedTheme = localStorage.getItem('cc_theme') || 'dark';
+  applyTheme(savedTheme);
 
   if (localStorage.getItem('cc_seed')) {
     $('seedPhrase').value = localStorage.getItem('cc_seed');
