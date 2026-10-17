@@ -20,16 +20,16 @@
   --bubble-out:#005c4b;
 }
 [data-theme="light"] {
-  --bg:#f0f2f5;
+  --bg:#e8eaed;
   --panel:#ffffff;
   --panel2:#f0f2f5;
   --panel3:#e4e6eb;
   --accent:#00a884;
-  --text:#050505;
-  --text-dim:#65676b;
-  --border:#ced0d4;
+  --text:#1a1a1a;
+  --text-dim:#5f6368;
+  --border:#dadce0;
   --bubble-in:#ffffff;
-  --bubble-out:#d9fdd3;
+  --bubble-out:#d0f0c0;
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin:0; padding:0; height:100%; overflow:hidden; height:100dvh; }
@@ -94,7 +94,7 @@ button {
   width:100%;
   padding:15px;
   background:var(--accent);
-  color:white;
+  color:#ffffff;
   border:none;
   border-radius:12px;
   font-size:16px;
@@ -103,6 +103,23 @@ button {
   font-family:inherit;
 }
 button:active { transform:scale(0.97); opacity:0.9; }
+
+/* Вторичные кнопки — читаемый текст в обеих темах */
+#pickSoundBtn,
+#closeSettingsBtn,
+#logoutBtn,
+#joinContactBtn,
+#closeInviteBtn,
+#closeJoinBtn,
+#closeModalBtn,
+#themeDarkBtn,
+#themeLightBtn {
+  color: var(--text) !important;
+  background: var(--panel3) !important;
+}
+#themeDarkBtn, #themeLightBtn {
+  border-width: 2px;
+}
 .remember-box {
   display:flex;
   align-items:center;
@@ -311,15 +328,20 @@ button:active { transform:scale(0.97); opacity:0.9; }
   margin-bottom:2px;
 }
 .msg-item.out .msg-author { color:#7dd3b6; }
+[data-theme="light"] .msg-item.out .msg-author { color:#128c7e; }
 .msg-text {
   white-space:pre-wrap;
   word-break:break-word;
+  color:var(--text);
 }
 .msg-time {
   font-size:10.5px;
-  color:rgba(233,237,239,0.55);
+  color:var(--text-dim);
   text-align:right;
   margin-top:4px;
+}
+[data-theme="light"] .msg-item.out .msg-time {
+  color:#4a7c59;
 }
 .msg-photo {
   max-width:100%;
