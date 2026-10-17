@@ -1289,36 +1289,59 @@ async function processQueue() {
   const sendBtn = $('sendBtn');
   if (sendBtn) sendBtn.classList.add('sending');
 
-  // Страховка: через 25 секунд принудительно разблокируем
+  const item = sendQueue.shift();
+  const msgTs = item.msg.ts;
+
+  // Через 15 секунд убираем надпись "Отправка..." в любом случае
+  const forceDone = setTimeout(() => {
+    const local = state.localMsgs.find(m => m.ts === msgTs);
+    if (local && local.pending) {
+      local.pending = false;
+      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+      renderLocalMsgs();
+    }
+  }, 15000);
+
   const safety = setTimeout(() => {
     isSending = false;
     if (sendBtn) sendBtn.classList.remove('sending');
-  }, 25000);
-
-  const item = sendQueue.shift();
+  }, 28000);
 
   try {
     const cipher = enc(JSON.stringify(item.msg), state.activeChat.key);
-    let current = await api.getGist(state.activeChat.id);
-    if (current === 'init') current = '';
-    const newContent = current ? current + '\n' + cipher : cipher;
-    await api.updateGist(state.activeChat.id, newContent);
 
-    const local = state.localMsgs.find(m => m.ts === item.msg.ts);
+    const current = await Promise.race([
+      api.getGist(state.activeChat.id),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+    ]);
+
+    let content = (current === 'init' || !current) ? '' : current;
+    const newContent = content ? content + '\n' + cipher : cipher;
+
+    await Promise.race([
+      api.updateGist(state.activeChat.id, newContent),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+    ]);
+
+    const local = state.localMsgs.find(m => m.ts === msgTs);
     if (local) local.pending = false;
     localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
     renderLocalMsgs();
   } catch (e) {
-    console.error(e);
-    toast('Ошибка сети. Попробуем ещё раз...');
-    sendQueue.unshift(item);
+    console.error('Send error:', e.message || e);
+    const local = state.localMsgs.find(m => m.ts === msgTs);
+    if (local) local.pending = false;
+    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+    renderLocalMsgs();
+    // Не ставим обратно в очередь, чтобы не зациклиться на медленной сети
   } finally {
+    clearTimeout(forceDone);
     clearTimeout(safety);
     isSending = false;
     if (sendBtn) sendBtn.classList.remove('sending');
 
     if (sendQueue.length > 0) {
-      setTimeout(processQueue, 500);
+      setTimeout(processQueue, 700);
     }
   }
 }
