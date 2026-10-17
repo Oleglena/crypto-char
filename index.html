@@ -22,7 +22,6 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .remember-box { display:flex; align-items:center; gap:8px; margin: 15px 0; font-size:14px; color:var(--text-dim); }
 .remember-box input { width:18px; height:18px; accent-color:var(--accent); }
 
-/* Глазик */
 .pwd-wrap { position:relative; width:100%; }
 .pwd-wrap input { padding-right:50px; }
 .pwd-toggle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:40px; height:40px; border:none; background:transparent; color:var(--text-dim); display:flex; justify-content:center; align-items:center; cursor:pointer; }
@@ -280,7 +279,12 @@ $('inputHeightSelect').addEventListener('change', (e) => {
 const api = {
   headers: () => ({ 'Authorization': `token ${state.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' }),
   createGist: async () => {
-    let res = await fetch('https://api.github.com/gists', { method: 'POST', headers: api.headers(), body: JSON.stringify({ description: 'Chat', public: false, files: { 'chat.txt': { content: '' } } }) });
+    // ИСПРАВЛЕНИЕ: Добавлены кавычки вокруг пустого файла
+    let res = await fetch('https://api.github.com/gists', { 
+      method: 'POST', 
+      headers: api.headers(), 
+      body: JSON.stringify({ description: 'Chat', public: false, files: { 'chat.txt': { content: 'init' } } }) 
+    });
     if(!res.ok) {
        let err = await res.text();
        console.log('GitHub Error:', err);
@@ -342,10 +346,7 @@ async function createContact() {
   try {
     let newSeed = Math.random().toString(36).substring(2, 12);
     toast('Создаём чат...');
-    
-    // Убираем пробелы из токена на всякий случай
     state.token = state.token.trim();
-    
     let gistId = await api.createGist();
     await new Promise(r => setTimeout(r, 1000)); 
     let inviteCode = btoa(JSON.stringify({ id: gistId, key: newSeed }));
@@ -439,70 +440,3 @@ async function sendMessage() {
 }
 
 $('loginBtn').onclick = () => {
-  state.user = $('userName').value.trim();
-  state.seed = $('seedPhrase').value.trim();
-  state.token = $('ghToken').value.trim(); // Убираем пробелы при входе
-  if(!state.user || !state.seed || !state.token) return toast('Заполните все поля');
-  localStorage.setItem('cc_user', state.user);
-  localStorage.setItem('cc_token', state.token);
-  if($('rememberMe').checked) localStorage.setItem('cc_seed', state.seed);
-  $('login-screen').style.display = 'none';
-  $('contacts-screen').classList.add('active');
-  loadContacts();
-};
-
-$('addContactBtn').onclick = () => $('addModal').classList.add('show');
-$('closeModalBtn').onclick = () => $('addModal').classList.remove('show');
-$('closeInviteBtn').onclick = () => $('inviteModal').classList.remove('show');
-$('createContactBtn').onclick = createContact;
-$('joinContactBtn').onclick = () => { $('addModal').classList.remove('show'); $('joinModal').classList.add('show'); };
-$('closeJoinBtn').onclick = () => $('joinModal').classList.remove('show');
-$('doJoinBtn').onclick = joinContact;
-
-$('backBtn').onclick = () => {
-  clearInterval(state.poll);
-  state.activeChat = null;
-  $('chat-screen').classList.remove('active');
-  $('contacts-screen').classList.add('active');
-};
-
-$('settingsBtn').onclick = () => $('settingsPanel').classList.add('show');
-$('closeSettingsBtn').onclick = () => $('settingsPanel').classList.remove('show');
-$('logoutBtn').onclick = () => { localStorage.removeItem('cc_seed'); location.reload(); };
-
-$('sendBtn').onclick = sendMessage;
-$('attachBtn').onclick = () => $('fileInput').click();
-$('fileInput').onchange = e => {
-  let f = e.target.files[0]; if(!f || !state.activeChat) return;
-  let reader = new FileReader();
-  reader.onload = async ev => {
-    let msg = { author: state.user, type: 'photo', data: ev.target.result, ts: Date.now() };
-    let cipher = enc(JSON.stringify(msg), state.activeChat.key);
-    let current = await api.getGist(state.activeChat.id);
-    if(current === 'init') current = '';
-    let newContent = current ? current + '\n' + cipher : cipher;
-    await api.updateGist(state.activeChat.id, newContent);
-    loadMessages();
-  };
-  reader.readAsDataURL(f); e.target.value='';
-};
-
-window.onload = () => {
-  if(localStorage.getItem('cc_user')) $('userName').value = localStorage.getItem('cc_user');
-  if(localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token');
-  
-  if(localStorage.getItem('cc_sound') !== null) { settings.sound = localStorage.getItem('cc_sound')==='true'; $('toggleSound').checked = settings.sound; }
-  if(localStorage.getItem('cc_vibrate') !== null) { settings.vibrate = localStorage.getItem('cc_vibrate')==='true'; $('toggleVibrate').checked = settings.vibrate; }
-  if(localStorage.getItem('cc_notify') !== null) { settings.notification = localStorage.getItem('cc_notify')==='true'; $('toggleNotification').checked = settings.notification; }
-  if(localStorage.getItem('cc_sound_data')) { state.soundData = localStorage.getItem('cc_sound_data'); $('soundName').innerText = localStorage.getItem('cc_sound_name') || 'Своя мелодия'; }
-  if(localStorage.getItem('cc_height')) { $('inputHeightSelect').value = localStorage.getItem('cc_height'); $('msgInput').style.height = localStorage.getItem('cc_height')+'px'; }
-
-  if(localStorage.getItem('cc_seed')) {
-    $('seedPhrase').value = localStorage.getItem('cc_seed');
-    $('rememberMe').checked = true;
-    $('loginBtn').click();
-  }
-};
-</script>
-</body>
-</html>
