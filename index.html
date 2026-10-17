@@ -12,17 +12,18 @@
   --accent:#00a884; --text:#e9edef; --text-dim:#8696a0; --border:#30363d;
   --bubble-in:#202c33; --bubble-out:#005c4b;
   --voice-btn-in:#2aabee; --voice-btn-out:#ffffff;
-  --voice-wave-in:rgba(42,171,238,0.3); --voice-wave-out:rgba(255,255,255,0.5);
-  --voice-wave-played-in:#2aabee; --voice-wave-played-out:#ffffff;
+  --voice-wave-in:rgba(255,255,255,0.4); --voice-wave-out:rgba(255,255,255,0.6);
+  --voice-wave-played-in:#ffffff; --voice-wave-played-out:#ffffff;
 }
 [data-theme="light"] {
   --bg:#e8eaed; --panel:#ffffff; --panel2:#f0f2f5; --panel3:#e4e6eb;
   --accent:#00a884; --text:#1a1a1a; --text-dim:#5f6368; --border:#dadce0;
   --bubble-in:#ffffff; --bubble-out:#d0f0c0;
   --voice-btn-in:#2aabee; --voice-btn-out:#ffffff;
-  --voice-wave-in:rgba(42,171,238,0.3); --voice-wave-out:rgba(0,168,132,0.3);
+  --voice-wave-in:rgba(42,171,238,0.4); --voice-wave-out:rgba(0,168,132,0.4);
   --voice-wave-played-in:#2aabee; --voice-wave-played-out:#00a884;
 }
+
 * { box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin:0; padding:0; height:100%; overflow:hidden; height:100dvh; }
 body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; display:flex; justify-content:center; }
@@ -101,7 +102,6 @@ textarea { width:100%; border:none; background:transparent; padding:6px 0; font-
 .btn-send { width:50px; height:50px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:22px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:transform 0.1s, opacity 0.15s; }
 .btn-send:active { transform:scale(0.9); background:#008069; }
 
-/* ГОЛОСОВЫЕ (Telegram-style) */
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 .voice-msg { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 4px 2px 4px 4px; }
 .voice-play-btn { width: 44px; height: 44px; border-radius: 50%; border: none; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s, background 0.2s; }
@@ -151,7 +151,7 @@ textarea { width:100%; border:none; background:transparent; padding:6px 0; font-
 </style>
 </head>
 <body>
-
+<!-- HTML структура остаётся прежней -->
 <div class="container">
   <div id="login-screen">
     <div class="login-logo">🔐</div>
@@ -614,7 +614,6 @@ $('fileInput').onchange = e => {
   reader.readAsDataURL(f); e.target.value = '';
 };
 
-// ГОЛОСОВЫЕ
 let mediaRecorder = null;
 let audioChunks = [];
 let recStartTime = 0;
