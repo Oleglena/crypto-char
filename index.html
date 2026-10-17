@@ -60,8 +60,9 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .input-area { padding:8px 10px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); background:var(--panel2); display:flex; gap:6px; align-items:flex-end; }
 .input-wrapper { flex:1; background:var(--panel3); border-radius:22px; display:flex; align-items:center; padding:4px 12px; min-width:0; }
 textarea { width:100%; border:none; background:transparent; padding:10px 0; font-size:15px; resize:none; max-height:100px; color:var(--text); outline:none; font-family:inherit; }
-.btn-mini { width:42px; height:42px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
-.btn-send { width:46px; height:46px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
+.btn-mini { width:42px; height:42px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; cursor:pointer; }
+.btn-send { width:46px; height:46px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; cursor:pointer; }
+.btn-send:disabled, .btn-mini:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; padding:20px; }
 .modal.show { display:flex; }
@@ -279,7 +280,6 @@ $('inputHeightSelect').addEventListener('change', (e) => {
 const api = {
   headers: () => ({ 'Authorization': `token ${state.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' }),
   createGist: async () => {
-    // ИСПРАВЛЕНИЕ: Добавлены кавычки вокруг пустого файла
     let res = await fetch('https://api.github.com/gists', { 
       method: 'POST', 
       headers: api.headers(), 
@@ -425,7 +425,12 @@ async function loadMessages() {
 async function sendMessage() {
   let text = $('msgInput').value.trim();
   if(!text || !state.activeChat) return;
-  $('msgInput').disabled = true; $('sendBtn').disabled = true; $('msgInput').value = ''; 
+  
+  // Защита от зависания кнопок
+  $('msgInput').disabled = true; 
+  $('sendBtn').disabled = true; 
+  $('msgInput').value = ''; 
+  
   try {
     let msg = { author: state.user, type: 'text', text, ts: Date.now() };
     let cipher = enc(JSON.stringify(msg), state.activeChat.key);
@@ -434,8 +439,13 @@ async function sendMessage() {
     let newContent = current ? current + '\n' + cipher : cipher;
     await api.updateGist(state.activeChat.id, newContent);
     await loadMessages();
-  } catch(e) { toast('Ошибка: ' + e.message); } finally {
-    $('msgInput').disabled = false; $('sendBtn').disabled = false; $('msgInput').focus();
+  } catch(e) { 
+    toast('Ошибка: ' + e.message); 
+  } finally {
+    // В ЛЮБОМ СЛУЧАЕ ВОЗВРАЩАЕМ КНОПКИ
+    $('msgInput').disabled = false; 
+    $('sendBtn').disabled = false; 
+    $('msgInput').focus();
   }
 }
 
