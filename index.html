@@ -28,7 +28,8 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .main-header h2 { margin:0; font-size:18px; }
 .btn-icon { width:auto; padding:8px 12px; font-size:14px; background:var(--accent); border-radius:8px; }
 #contacts-list { flex:1; overflow-y:auto; padding:10px; }
-.contact-item { display:flex; align-items:center; gap:12px; padding:15px; background:var(--panel2); border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border); }
+.contact-item { display:flex; align-items:center; gap:12px; padding:15px; background:var(--panel2); border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border); user-select: none; -webkit-user-select: none; }
+.contact-item:active { background:var(--panel3); }
 .avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#4f6ef7); display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; flex-shrink:0; }
 .contact-info { flex:1; }
 .contact-name { font-weight:600; font-size:16px; }
@@ -233,17 +234,14 @@ const api = {
     let res = await fetch('https://api.github.com/gists', { 
       method: 'POST', 
       headers: api.headers(), 
-      body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content: 'init' } } }) 
+      body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content: '' } } }) 
     });
-    if(!res.ok) {
-       let err = await res.text();
-       console.error('Create error:', err);
-       throw new Error('Ошибка создания Gist');
-    }
+    if(!res.ok) throw new Error('Ошибка создания (проверьте токен)');
     return (await res.json()).id;
   },
   getGist: async (id) => {
     let res = await fetch(`https://api.github.com/gists/${id}?t=${Date.now()}`);
+    if(!res.ok) return '';
     let data = await res.json();
     return data.files && data.files['chat.txt'] ? data.files['chat.txt'].content : '';
   },
@@ -255,8 +253,8 @@ const api = {
     });
     if(!res.ok) {
        let err = await res.text();
-       console.error('Update error:', err);
-       throw new Error('Ошибка сети (PATCH)');
+       console.error(err);
+       throw new Error('Нет прав на запись');
     }
   }
 };
@@ -269,13 +267,25 @@ function loadContacts() {
 }
 function renderContacts() {
   let html = '';
-  state.contacts.forEach(c => {
-    html += `<div class="contact-item" onclick="openChat('${c.id}')">
+  state.contacts.forEach((c, index) => {
+    // Добавлено событие oncontextmenu для вызова удаления
+    html += `<div class="contact-item" onclick="openChat('${c.id}')" oncontextmenu="event.preventDefault(); deleteContact(${index});">
       <div class="avatar">${c.name.charAt(0).toUpperCase()}</div>
-      <div class="contact-info"><div class="contact-name">${c.name}</div><div class="contact-sub">Нажмите, чтобы открыть</div></div>
+      <div class="contact-info"><div class="contact-name">${c.name}</div><div class="contact-sub">Нажмите, чтобы открыть (или зажмите для удаления)</div></div>
     </div>`;
   });
   $('contacts-list').innerHTML = html || '<p style="text-align:center;color:var(--text-dim);margin-top:40px;">Нет контактов. Нажмите "+ Добавить".</p>';
+}
+
+// Функция удаления
+window.deleteContact = function(index) {
+  let name = state.contacts[index].name;
+  if(confirm('Удалить контакт "' + name + '"?')) {
+    state.contacts.splice(index, 1);
+    saveContacts();
+    renderContacts();
+    toast('Контакт удален');
+  }
 }
 
 async function createContact() {
@@ -286,8 +296,7 @@ async function createContact() {
     toast('Создаём чат...');
     let gistId = await api.createGist();
     
-    // Ждем 1.5 секунды, чтобы GitHub успел создать Gist
-    await new Promise(r => setTimeout(r, 1500)); 
+    await new Promise(r => setTimeout(r, 1500)); // Задержка для стабильности
     
     let inviteCode = btoa(JSON.stringify({ id: gistId, key: newSeed }));
     
