@@ -224,10 +224,22 @@ $('inputHeightSelect').addEventListener('change', (e) => {
 
 // --- GITHUB API ---
 const api = {
-  headers: () => ({ 'Authorization': `token ${state.token}`, 'Content-Type': 'application/json' }),
+  headers: () => ({ 
+    'Authorization': `token ${state.token}`, 
+    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json'
+  }),
   createGist: async () => {
-    let res = await fetch('https://api.github.com/gists', { method: 'POST', headers: api.headers(), body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content: '' } } }) });
-    if(!res.ok) throw new Error('Ошибка создания');
+    let res = await fetch('https://api.github.com/gists', { 
+      method: 'POST', 
+      headers: api.headers(), 
+      body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content: 'init' } } }) 
+    });
+    if(!res.ok) {
+       let err = await res.text();
+       console.error('Create error:', err);
+       throw new Error('Ошибка создания');
+    }
     return (await res.json()).id;
   },
   getGist: async (id) => {
@@ -236,8 +248,16 @@ const api = {
     return data.files && data.files['chat.txt'] ? data.files['chat.txt'].content : '';
   },
   updateGist: async (id, content) => {
-    let res = await fetch(`https://api.github.com/gists/${id}`, { method: 'PATCH', headers: api.headers(), body: JSON.stringify({ files: { 'chat.txt': { content } } }) });
-    if(!res.ok) throw new Error('Ошибка сети');
+    let res = await fetch(`https://api.github.com/gists/${id}`, { 
+      method: 'PATCH', 
+      headers: api.headers(), 
+      body: JSON.stringify({ files: { 'chat.txt': { content } } }) 
+    });
+    if(!res.ok) {
+       let err = await res.text();
+       console.error('Update error:', err);
+       throw new Error('Ошибка сети');
+    }
   }
 };
 
@@ -362,7 +382,6 @@ async function sendMessage() {
   let text = $('msgInput').value.trim();
   if(!text || !state.activeChat) return;
   
-  // Блокируем кнопку от двойных нажатий
   $('msgInput').disabled = true;
   $('sendBtn').disabled = true;
   $('msgInput').value = ''; 
@@ -371,7 +390,6 @@ async function sendMessage() {
     let msg = { author: state.user, type: 'text', text, ts: Date.now() };
     let cipher = enc(JSON.stringify(msg), state.activeChat.key);
     
-    // ЖДЕМ получения текущих сообщений
     let current = await api.getGist(state.activeChat.id);
     if(current === 'init') current = '';
     
@@ -380,7 +398,7 @@ async function sendMessage() {
     
     await loadMessages();
   } catch(e) {
-    toast('Ошибка отправки. Проверьте токен.');
+    toast('Ошибка отправки. Возможно, нет прав у токена.');
     console.error(e);
   } finally {
     $('msgInput').disabled = false;
