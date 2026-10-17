@@ -51,8 +51,8 @@ button:active { transform: scale(0.97); opacity: 0.9; }
 .back-btn { background:none; border:none; color:var(--text-dim); width:auto; padding:5px; font-size:24px; cursor:pointer; }
 .back-btn:active { color: var(--text); }
 
-/* Кнопка обновления - фиксированный размер */
-.btn-refresh {
+/* Исправленная кнопка обновления */
+#refreshChatBtn {
   width: 40px; height: 40px; 
   border-radius: 50%;
   background: transparent;
@@ -63,7 +63,7 @@ button:active { transform: scale(0.97); opacity: 0.9; }
   margin-left: auto;
   flex-shrink: 0;
 }
-.btn-refresh:active { background: rgba(255,255,255,0.1); }
+#refreshChatBtn:active { background: rgba(255,255,255,0.1); }
 
 #messages { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:6px; background:radial-gradient(circle at 20% 10%,rgba(0,168,132,0.04),transparent 40%); }
 
@@ -80,7 +80,7 @@ button:active { transform: scale(0.97); opacity: 0.9; }
 .input-wrapper { flex:1; background:var(--panel3); border-radius:22px; display:flex; align-items:center; padding:4px 12px; min-width:0; }
 textarea { width:100%; border:none; background:transparent; padding:10px 0; font-size:15px; resize:none; max-height:100px; color:var(--text); outline:none; font-family:inherit; }
 
-/* Отзывчивые кнопки */
+/* Увеличенные и отзывчивые кнопки */
 .btn-mini { width:48px; height:48px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:24px; cursor:pointer; transition: background 0.1s; }
 .btn-mini:active { background: rgba(255,255,255,0.1); }
 .btn-send { width:50px; height:50px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:22px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.1s; }
@@ -154,7 +154,7 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
       <button class="back-btn" id="backBtn">←</button>
       <div class="avatar" id="chat-avatar">?</div>
       <div class="contact-info"><div class="contact-name" id="chat-title">Контакт</div></div>
-      <button class="btn-refresh" id="refreshChatBtn">🔄</button>
+      <button id="refreshChatBtn">🔄</button>
     </div>
     <div id="messages"></div>
     <div class="input-area">
