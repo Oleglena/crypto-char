@@ -410,7 +410,7 @@ $('fileInput').onchange = e => {
 // АВТОВХОД
 window.onload = () => {
   if(localStorage.getItem('cc_user')) $('userName').value = localStorage.getItem('cc_user');
-  if(localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token');
+  if(localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token'); // <-- ВОТ ЭТА СТРОКА
   
   // Настройки
   if(localStorage.getItem('cc_sound') !== null) { settings.sound = localStorage.getItem('cc_sound')==='true'; $('toggleSound').checked = settings.sound; }
@@ -419,10 +419,11 @@ window.onload = () => {
   if(localStorage.getItem('cc_sound_data')) { state.soundData = localStorage.getItem('cc_sound_data'); $('soundName').innerText = localStorage.getItem('cc_sound_name') || 'Своя мелодия'; }
   if(localStorage.getItem('cc_height')) { $('inputHeightSelect').value = localStorage.getItem('cc_height'); $('msgInput').style.height = localStorage.getItem('cc_height')+'px'; }
 
+  // Если пароль сохранён — входим
   if(localStorage.getItem('cc_seed')) {
     $('seedPhrase').value = localStorage.getItem('cc_seed');
     $('rememberMe').checked = true;
-    $('loginBtn').click();
+    $('loginBtn').click(); // Автоматически нажимаем Войти
   }
 };
 </script>
