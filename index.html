@@ -40,7 +40,6 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .back-btn { background:none; border:none; color:var(--text-dim); width:auto; padding:5px; font-size:24px; }
 #messages { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:6px; background:radial-gradient(circle at 20% 10%,rgba(0,168,132,0.04),transparent 40%); }
 
-/* Сообщения */
 .msg-item { max-width:85%; padding:6px 12px 8px; border-radius:12px; font-size:14.5px; line-height:1.35; position:relative; margin-bottom: 2px; }
 .msg-item.in { align-self:flex-start; background:var(--bubble-in); border-bottom-left-radius:4px; }
 .msg-item.out { align-self:flex-end; background:var(--bubble-out); border-bottom-right-radius:4px; }
@@ -56,7 +55,6 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
 .btn-mini { width:42px; height:42px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
 .btn-send { width:46px; height:46px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
 
-/* Модалки */
 .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; padding:20px; }
 .modal.show { display:flex; }
 .modal-content { background:var(--panel2); padding:20px; border-radius:16px; width:100%; max-width:400px; }
@@ -141,7 +139,6 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
   </div>
 </div>
 
-<!-- МОДАЛКИ -->
 <div class="modal" id="addModal">
   <div class="modal-content">
     <h3>Новый контакт</h3>
@@ -179,6 +176,7 @@ const $ = id => document.getElementById(id);
 const state = { user:'', seed:'', token:'', contacts:[], activeChat:null, poll:null, soundData:null, soundCtx:null };
 let settings = { sound:true, vibrate:true, notification:false };
 let knownIds = new Set();
+let isFirstLoad = true; // Флаг: загружаем чат впервые
 
 const toast = (msg) => { $('toast').innerText = msg; $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'), 3000); };
 const enc = (text, key) => CryptoJS.AES.encrypt(text, key).toString();
@@ -305,7 +303,9 @@ async function openChat(id) {
   $('chat-title').innerText = state.activeChat.name;
   $('chat-avatar').innerText = state.activeChat.name.charAt(0).toUpperCase();
   $('messages').innerHTML = '';
+  
   knownIds.clear();
+  isFirstLoad = true; // При входе в чат звук не играет
   
   await loadMessages();
   clearInterval(state.poll);
@@ -324,16 +324,28 @@ async function loadMessages() {
       if(!txt) continue;
       try {
         let msg = JSON.parse(txt);
+        
+        // Логика звука: играем, только если сообщение новое И это не первая загрузка чата
         if(!knownIds.has(msg.ts)) {
           knownIds.add(msg.ts);
-          if(msg.author !== state.user) { playNotify(); vibrate(); showNotify(msg.text || 'Медиа'); }
+          if(!isFirstLoad && msg.author !== state.user) { 
+            playNotify(); vibrate(); showNotify(msg.text || 'Медиа'); 
+          }
         }
 
         let out = msg.author === state.user ? 'out' : 'in';
         let authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
-        let time = new Date(msg.ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        let bubble = '';
         
+        // Проверка на валидную дату
+        let time = '--:--';
+        if(msg.ts) {
+          let d = new Date(msg.ts);
+          if(!isNaN(d.getTime())) {
+            time = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          }
+        }
+
+        let bubble = '';
         if(msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
         else if(msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
         
@@ -342,6 +354,7 @@ async function loadMessages() {
     }
     $('messages').innerHTML = html;
     $('messages').scrollTop = $('messages').scrollHeight;
+    isFirstLoad = false; // После первой загрузки ставим false
   } catch(e) { console.error(e); }
 }
 
