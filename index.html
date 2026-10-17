@@ -320,6 +320,30 @@ button:active { transform:scale(0.97); opacity:0.9; }
   max-width:100%;
   margin-top:5px;
 }
+.photo-menu-btn {
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  border:none;
+  background:rgba(0,0,0,0.55);
+  color:#fff;
+  font-size:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:4;
+  backdrop-filter:blur(4px);
+  line-height:1;
+  padding:0;
+}
+.photo-menu-btn:active {
+  background:rgba(0,0,0,0.8);
+  transform:scale(0.92);
+}
 .photo-actions {
   position:absolute;
   top:8px;
@@ -331,6 +355,9 @@ button:active { transform:scale(0.97); opacity:0.9; }
 }
 .photo-wrap.show-actions .photo-actions {
   display:flex;
+}
+.photo-wrap.show-actions .photo-menu-btn {
+  display:none;
 }
 .photo-action-btn {
   width:36px;
@@ -1038,10 +1065,11 @@ function renderLocalMsgs() {
       bubble = `
         <div class="photo-wrap" data-ts="${msg.ts}" data-idx="${idx}">
           <img class="msg-photo" src="${msg.data}" alt="Фото" loading="lazy">
+          <button class="photo-menu-btn" title="Действия">⋯</button>
           <div class="photo-actions">
-            <button class="photo-action-btn" onclick="downloadPhoto('${msg.ts}')" title="Скачать">⬇️</button>
-            <button class="photo-action-btn" onclick="sharePhoto('${msg.ts}')" title="Поделиться">📤</button>
-            <button class="photo-action-btn delete" onclick="deletePhoto('${msg.ts}')" title="Удалить">🗑️</button>
+            <button class="photo-action-btn" onclick="event.stopPropagation(); downloadPhoto('${msg.ts}')" title="Скачать">⬇️</button>
+            <button class="photo-action-btn" onclick="event.stopPropagation(); sharePhoto('${msg.ts}')" title="Поделиться">📤</button>
+            <button class="photo-action-btn delete" onclick="event.stopPropagation(); deletePhoto('${msg.ts}')" title="Удалить">🗑️</button>
           </div>
         </div>`;
     }
@@ -1059,29 +1087,35 @@ function renderLocalMsgs() {
   // Навешиваем обработчики на фото
   document.querySelectorAll('.photo-wrap').forEach(wrap => {
     const img = wrap.querySelector('.msg-photo');
-    if (!img) return;
+    const menuBtn = wrap.querySelector('.photo-menu-btn');
+    if (!img || !menuBtn) return;
 
-    // Одинарный тап / клик — показать/скрыть кнопки
-    wrap.addEventListener('click', function(e) {
-      if (e.target.closest('.photo-action-btn')) return;
-      // Скрываем все остальные
+    // Нажатие на три точки — показать/скрыть меню
+    menuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Скрываем все остальные меню
       document.querySelectorAll('.photo-wrap.show-actions').forEach(w => {
         if (w !== wrap) w.classList.remove('show-actions');
       });
       wrap.classList.toggle('show-actions');
     });
 
-    // Двойной тап — полноэкранный просмотр
+    // Клик вне меню — скрыть
+    document.addEventListener('click', function hideMenus(e) {
+      if (!wrap.contains(e.target)) {
+        wrap.classList.remove('show-actions');
+      }
+    });
+
+    // Двойной тап по фото — полноэкранный просмотр
     let tapCount = 0;
     let tapTimer = null;
     img.addEventListener('touchend', function(e) {
       e.preventDefault();
       tapCount++;
       if (tapCount === 1) {
-        tapTimer = setTimeout(() => {
-          tapCount = 0;
-          // одиночный тап уже обработан выше через click
-        }, 300);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 300);
       } else if (tapCount === 2) {
         clearTimeout(tapTimer);
         tapCount = 0;
