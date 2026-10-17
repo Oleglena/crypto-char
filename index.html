@@ -13,7 +13,6 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; height: 100dvh; 
 body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; display:flex; justify-content:center; }
 .container { width:100%; max-width:520px; background:var(--panel); display:flex; flex-direction:column; position:relative; overflow:hidden; height: 100%; }
 
-/* ЭКРАН ВХОДА */
 #login-screen { padding:32px 20px; display:flex; flex-direction:column; justify-content:center; height:100%; overflow-y:auto; }
 .login-logo { width:88px; height:88px; margin:0 auto 20px; border-radius:26px; background:linear-gradient(135deg,#00a884,#008069); display:flex; justify-content:center; align-items:center; font-size:44px; }
 .field { margin-bottom:12px; }
@@ -23,7 +22,6 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .remember-box { display:flex; align-items:center; gap:8px; margin: 15px 0; font-size:14px; color:var(--text-dim); }
 .remember-box input { width:18px; height:18px; accent-color:var(--accent); }
 
-/* СПИСОК КОНТАКТОВ */
 #contacts-screen { display:none; flex-direction:column; height:100%; width:100%; }
 #contacts-screen.active { display:flex; }
 .main-header { padding:16px; background:var(--panel2); display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); }
@@ -31,29 +29,34 @@ button { width:100%; padding:15px; background:var(--accent); color:white; border
 .btn-icon { width:auto; padding:8px 12px; font-size:14px; background:var(--accent); border-radius:8px; }
 #contacts-list { flex:1; overflow-y:auto; padding:10px; }
 .contact-item { display:flex; align-items:center; gap:12px; padding:15px; background:var(--panel2); border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border); }
-.avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#4f6ef7); display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; }
+.avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#4f6ef7); display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; flex-shrink:0; }
 .contact-info { flex:1; }
 .contact-name { font-weight:600; font-size:16px; }
 .contact-sub { font-size:12px; color:var(--text-dim); }
 
-/* ЭКРАН ЧАТА */
 #chat-screen { display:none; flex-direction:column; height:100%; width:100%; position:absolute; inset:0; background:var(--panel); z-index:10; }
 #chat-screen.active { display:flex; }
 .header { padding:12px; background:var(--panel2); display:flex; align-items:center; gap:12px; border-bottom: 1px solid var(--border); }
 .back-btn { background:none; border:none; color:var(--text-dim); width:auto; padding:5px; font-size:24px; }
 #messages { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:6px; background:radial-gradient(circle at 20% 10%,rgba(0,168,132,0.04),transparent 40%); }
-.msg-item { max-width:82%; padding:8px 12px; border-radius:12px; font-size:14.5px; line-height:1.35; position:relative; }
-.msg-item.in { align-self:flex-start; background:var(--bubble-in); border-bottom-left-radius:3px; }
-.msg-item.out { align-self:flex-end; background:var(--bubble-out); border-bottom-right-radius:3px; }
-.msg-photo { max-width:100%; border-radius:8px; margin-top:5px; }
+
+/* Сообщения */
+.msg-item { max-width:85%; padding:6px 12px 8px; border-radius:12px; font-size:14.5px; line-height:1.35; position:relative; margin-bottom: 2px; }
+.msg-item.in { align-self:flex-start; background:var(--bubble-in); border-bottom-left-radius:4px; }
+.msg-item.out { align-self:flex-end; background:var(--bubble-out); border-bottom-right-radius:4px; }
+.msg-author { font-size:11.5px; font-weight:700; color:var(--accent); margin-bottom:2px; }
+.msg-item.out .msg-author { color:#7dd3b6; }
+.msg-text { white-space:pre-wrap; word-break:break-word; }
+.msg-time { font-size:10.5px; color:rgba(233,237,239,0.55); text-align:right; margin-top:4px; }
+.msg-photo { max-width:100%; border-radius:6px; display:block; margin-top:5px; }
 
 .input-area { padding:8px 10px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); background:var(--panel2); display:flex; gap:6px; align-items:flex-end; }
 .input-wrapper { flex:1; background:var(--panel3); border-radius:22px; display:flex; align-items:center; padding:4px 12px; min-width:0; }
-textarea { width:100%; border:none; background:transparent; padding:10px 0; font-size:15px; resize:none; max-height:100px; color:var(--text); outline:none; }
+textarea { width:100%; border:none; background:transparent; padding:10px 0; font-size:15px; resize:none; max-height:100px; color:var(--text); outline:none; font-family:inherit; }
 .btn-mini { width:42px; height:42px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
 .btn-send { width:46px; height:46px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:20px; }
 
-/* МОДАЛКИ И НАСТРОЙКИ */
+/* Модалки */
 .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; padding:20px; }
 .modal.show { display:flex; }
 .modal-content { background:var(--panel2); padding:20px; border-radius:16px; width:100%; max-width:400px; }
@@ -87,8 +90,10 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
   <div id="contacts-screen">
     <div class="main-header">
       <h2>Чаты</h2>
-      <button class="btn-icon" id="settingsBtn">⚙️</button>
-      <button class="btn-icon" id="addContactBtn">+ Добавить</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-icon" id="settingsBtn">⚙️</button>
+        <button class="btn-icon" id="addContactBtn">+ Добавить</button>
+      </div>
     </div>
     <div id="contacts-list"></div>
   </div>
@@ -107,7 +112,6 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
     </div>
   </div>
 
-  <!-- НАСТРОЙКИ -->
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-card">
       <h3>Настройки</h3>
@@ -176,7 +180,6 @@ const state = { user:'', seed:'', token:'', contacts:[], activeChat:null, poll:n
 let settings = { sound:true, vibrate:true, notification:false };
 let knownIds = new Set();
 
-// --- УТИЛИТЫ ---
 const toast = (msg) => { $('toast').innerText = msg; $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'), 3000); };
 const enc = (text, key) => CryptoJS.AES.encrypt(text, key).toString();
 const dec = (cipher, key) => { try { return CryptoJS.AES.decrypt(cipher, key).toString(CryptoJS.enc.Utf8); } catch(e){ return null; } };
@@ -226,7 +229,7 @@ const api = {
   headers: () => ({ 'Authorization': `token ${state.token}`, 'Content-Type': 'application/json' }),
   createGist: async (content) => {
     let res = await fetch('https://api.github.com/gists', { method: 'POST', headers: api.headers(), body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content } } }) });
-    if(!res.ok) throw new Error('Не удалось создать Gist');
+    if(!res.ok) throw new Error('Ошибка создания');
     return (await res.json()).id;
   },
   getGist: async (id) => {
@@ -260,10 +263,9 @@ async function createContact() {
   let name = $('newContactName').value.trim();
   if(!name) return toast('Введите имя');
   try {
-    let newSeed = Math.random().toString(36).substring(2, 12); // Уникальный ключ чата
-    let initialContent = enc(JSON.stringify({ type: 'system', text: 'Чат создан' }), newSeed);
+    let newSeed = Math.random().toString(36).substring(2, 12);
     toast('Создаём чат...');
-    let gistId = await api.createGist(initialContent);
+    let gistId = await api.createGist('init');
     let inviteCode = btoa(JSON.stringify({ id: gistId, key: newSeed }));
     
     state.contacts.push({ name, id: gistId, key: newSeed });
@@ -314,7 +316,7 @@ async function loadMessages() {
   if(!state.activeChat) return;
   try {
     let content = await api.getGist(state.activeChat.id);
-    let lines = content.split('\n').filter(l => l.trim());
+    let lines = content.split('\n').filter(l => l.trim() && l !== 'init');
     let html = '';
     
     for(let line of lines) {
@@ -322,19 +324,20 @@ async function loadMessages() {
       if(!txt) continue;
       try {
         let msg = JSON.parse(txt);
-        if(msg.author === 'system') continue;
-        
         if(!knownIds.has(msg.ts)) {
           knownIds.add(msg.ts);
           if(msg.author !== state.user) { playNotify(); vibrate(); showNotify(msg.text || 'Медиа'); }
         }
 
         let out = msg.author === state.user ? 'out' : 'in';
+        let authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
+        let time = new Date(msg.ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         let bubble = '';
-        if(msg.type === 'text') bubble = `<div>${msg.text}</div>`;
+        
+        if(msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
         else if(msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
         
-        html += `<div class="msg-item ${out}"><b>${msg.author}:</b><br>${bubble}</div>`;
+        html += `<div class="msg-item ${out}">${authorHtml}${bubble}<div class="msg-time">${time}</div></div>`;
       } catch(e) {}
     }
     $('messages').innerHTML = html;
@@ -351,6 +354,7 @@ async function sendMessage() {
   let cipher = enc(JSON.stringify(msg), state.activeChat.key);
   
   let current = await api.getGist(state.activeChat.id);
+  if(current === 'init') current = '';
   let newContent = current ? current + '\n' + cipher : cipher;
   await api.updateGist(state.activeChat.id, newContent);
   loadMessages();
@@ -400,6 +404,7 @@ $('fileInput').onchange = e => {
     let msg = { author: state.user, type: 'photo', data: ev.target.result, ts: Date.now() };
     let cipher = enc(JSON.stringify(msg), state.activeChat.key);
     let current = await api.getGist(state.activeChat.id);
+    if(current === 'init') current = '';
     let newContent = current ? current + '\n' + cipher : cipher;
     await api.updateGist(state.activeChat.id, newContent);
     loadMessages();
@@ -410,20 +415,18 @@ $('fileInput').onchange = e => {
 // АВТОВХОД
 window.onload = () => {
   if(localStorage.getItem('cc_user')) $('userName').value = localStorage.getItem('cc_user');
-  if(localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token'); // <-- ВОТ ЭТА СТРОКА
+  if(localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token');
   
-  // Настройки
   if(localStorage.getItem('cc_sound') !== null) { settings.sound = localStorage.getItem('cc_sound')==='true'; $('toggleSound').checked = settings.sound; }
   if(localStorage.getItem('cc_vibrate') !== null) { settings.vibrate = localStorage.getItem('cc_vibrate')==='true'; $('toggleVibrate').checked = settings.vibrate; }
   if(localStorage.getItem('cc_notify') !== null) { settings.notification = localStorage.getItem('cc_notify')==='true'; $('toggleNotification').checked = settings.notification; }
   if(localStorage.getItem('cc_sound_data')) { state.soundData = localStorage.getItem('cc_sound_data'); $('soundName').innerText = localStorage.getItem('cc_sound_name') || 'Своя мелодия'; }
   if(localStorage.getItem('cc_height')) { $('inputHeightSelect').value = localStorage.getItem('cc_height'); $('msgInput').style.height = localStorage.getItem('cc_height')+'px'; }
 
-  // Если пароль сохранён — входим
   if(localStorage.getItem('cc_seed')) {
     $('seedPhrase').value = localStorage.getItem('cc_seed');
     $('rememberMe').checked = true;
-    $('loginBtn').click(); // Автоматически нажимаем Войти
+    $('loginBtn').click();
   }
 };
 </script>
