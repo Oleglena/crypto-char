@@ -105,13 +105,8 @@ button:active { transform:scale(0.97); opacity:0.9; }
   accent-color:var(--accent);
 }
 
-.pwd-wrap {
-  position:relative;
-  width:100%;
-}
-.pwd-wrap input {
-  padding-right:52px;
-}
+.pwd-wrap { position:relative; width:100%; }
+.pwd-wrap input { padding-right:52px; }
 .pwd-toggle {
   position:absolute;
   right:4px;
@@ -130,9 +125,7 @@ button:active { transform:scale(0.97); opacity:0.9; }
   padding:0;
   border-radius:50%;
 }
-.pwd-toggle:active {
-  background:rgba(255,255,255,0.1);
-}
+.pwd-toggle:active { background:rgba(255,255,255,0.1); }
 .pwd-toggle svg {
   width:22px;
   height:22px;
@@ -311,12 +304,55 @@ button:active { transform:scale(0.97); opacity:0.9; }
   border-radius:6px;
   display:block;
   margin-top:5px;
+  cursor:pointer;
 }
 .msg-status {
   font-size:10px;
   color:#ffb347;
   text-align:right;
   margin-top:2px;
+}
+
+/* Контейнер фото + кнопки действий */
+.photo-wrap {
+  position:relative;
+  display:inline-block;
+  max-width:100%;
+  margin-top:5px;
+}
+.photo-actions {
+  position:absolute;
+  top:8px;
+  right:8px;
+  display:none;
+  flex-direction:column;
+  gap:6px;
+  z-index:5;
+}
+.photo-wrap.show-actions .photo-actions {
+  display:flex;
+}
+.photo-action-btn {
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:none;
+  background:rgba(0,0,0,0.75);
+  color:#fff;
+  font-size:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  backdrop-filter:blur(4px);
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
+}
+.photo-action-btn:active {
+  transform:scale(0.9);
+  background:rgba(0,0,0,0.9);
+}
+.photo-action-btn.delete {
+  background:rgba(255,71,87,0.85);
 }
 
 .input-area {
@@ -385,9 +421,7 @@ textarea {
   transform:scale(0.9);
   background:#008069;
 }
-.btn-send.sending {
-  opacity:0.7;
-}
+.btn-send.sending { opacity:0.7; }
 
 .modal {
   display:none;
@@ -487,6 +521,43 @@ textarea {
   max-width:400px;
 }
 #toast.show { opacity:1; }
+
+/* Полноэкранный просмотр фото */
+#fullscreen-viewer {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.95);
+  z-index:300;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+}
+#fullscreen-viewer.show {
+  display:flex;
+}
+#fullscreen-viewer img {
+  max-width:100%;
+  max-height:85vh;
+  object-fit:contain;
+  border-radius:8px;
+}
+#fullscreen-close {
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  border:none;
+  color:#fff;
+  font-size:24px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 </style>
 </head>
 <body>
@@ -605,6 +676,12 @@ textarea {
   </div>
 </div>
 
+<!-- Полноэкранный просмотр -->
+<div id="fullscreen-viewer">
+  <button id="fullscreen-close">✕</button>
+  <img id="fullscreen-img" src="" alt="Фото">
+</div>
+
 <div class="modal" id="addModal">
   <div class="modal-content">
     <h3>Новый контакт</h3>
@@ -668,6 +745,8 @@ let isFirstLoad = true;
 let contactToDeleteIndex = -1;
 let isSending = false;
 let sendQueue = [];
+let lastTapTime = 0;
+let lastTapTs = 0;
 
 const toast = (msg) => {
   const t = $('toast');
@@ -943,7 +1022,7 @@ async function openChat(id) {
 
 function renderLocalMsgs() {
   let html = '';
-  state.localMsgs.forEach(msg => {
+  state.localMsgs.forEach((msg, idx) => {
     const out = msg.author === state.user ? 'out' : 'in';
     const authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
     let time = '--:--';
@@ -951,9 +1030,21 @@ function renderLocalMsgs() {
       const d = new Date(msg.ts);
       if (!isNaN(d.getTime())) time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+
     let bubble = '';
-    if (msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
-    else if (msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
+    if (msg.type === 'text') {
+      bubble = `<div class="msg-text">${msg.text}</div>`;
+    } else if (msg.type === 'photo') {
+      bubble = `
+        <div class="photo-wrap" data-ts="${msg.ts}" data-idx="${idx}">
+          <img class="msg-photo" src="${msg.data}" alt="Фото" loading="lazy">
+          <div class="photo-actions">
+            <button class="photo-action-btn" onclick="downloadPhoto('${msg.ts}')" title="Скачать">⬇️</button>
+            <button class="photo-action-btn" onclick="sharePhoto('${msg.ts}')" title="Поделиться">📤</button>
+            <button class="photo-action-btn delete" onclick="deletePhoto('${msg.ts}')" title="Удалить">🗑️</button>
+          </div>
+        </div>`;
+    }
 
     let statusHtml = '';
     if (out && msg.pending) {
@@ -964,7 +1055,154 @@ function renderLocalMsgs() {
   });
   $('messages').innerHTML = html;
   $('messages').scrollTop = $('messages').scrollHeight;
+
+  // Навешиваем обработчики на фото
+  document.querySelectorAll('.photo-wrap').forEach(wrap => {
+    const img = wrap.querySelector('.msg-photo');
+    if (!img) return;
+
+    // Одинарный тап / клик — показать/скрыть кнопки
+    wrap.addEventListener('click', function(e) {
+      if (e.target.closest('.photo-action-btn')) return;
+      // Скрываем все остальные
+      document.querySelectorAll('.photo-wrap.show-actions').forEach(w => {
+        if (w !== wrap) w.classList.remove('show-actions');
+      });
+      wrap.classList.toggle('show-actions');
+    });
+
+    // Двойной тап — полноэкранный просмотр
+    let tapCount = 0;
+    let tapTimer = null;
+    img.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      tapCount++;
+      if (tapCount === 1) {
+        tapTimer = setTimeout(() => {
+          tapCount = 0;
+          // одиночный тап уже обработан выше через click
+        }, 300);
+      } else if (tapCount === 2) {
+        clearTimeout(tapTimer);
+        tapCount = 0;
+        openFullscreen(img.src);
+      }
+    }, { passive: false });
+
+    // Для десктопа двойной клик
+    img.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      openFullscreen(img.src);
+    });
+  });
 }
+
+function openFullscreen(src) {
+  $('fullscreen-img').src = src;
+  $('fullscreen-viewer').classList.add('show');
+}
+$('fullscreen-close').onclick = () => {
+  $('fullscreen-viewer').classList.remove('show');
+  $('fullscreen-img').src = '';
+};
+$('fullscreen-viewer').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.classList.remove('show');
+    $('fullscreen-img').src = '';
+  }
+});
+
+// ===== Действия с фото =====
+window.downloadPhoto = function(ts) {
+  const msg = state.localMsgs.find(m => String(m.ts) === String(ts));
+  if (!msg || !msg.data) return toast('Фото не найдено');
+
+  const a = document.createElement('a');
+  a.href = msg.data;
+  a.download = `photo_${ts}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('Скачивание...');
+};
+
+window.sharePhoto = async function(ts) {
+  const msg = state.localMsgs.find(m => String(m.ts) === String(ts));
+  if (!msg || !msg.data) return toast('Фото не найдено');
+
+  try {
+    // Преобразуем dataURL в Blob
+    const res = await fetch(msg.data);
+    const blob = await res.blob();
+    const file = new File([blob], `photo_${ts}.jpg`, { type: blob.type || 'image/jpeg' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Фото из Secure Contacts'
+      });
+    } else if (navigator.share) {
+      await navigator.share({
+        title: 'Фото',
+        text: 'Фото из Secure Contacts',
+        url: msg.data
+      });
+    } else {
+      // Fallback — копируем dataURL или просто скачиваем
+      toast('Поделиться не поддерживается. Скачиваю...');
+      downloadPhoto(ts);
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      toast('Не удалось поделиться');
+      console.error(e);
+    }
+  }
+};
+
+window.deletePhoto = function(ts) {
+  if (!confirm('Удалить это фото из чата?')) return;
+
+  const idx = state.localMsgs.findIndex(m => String(m.ts) === String(ts));
+  if (idx === -1) return;
+
+  state.localMsgs.splice(idx, 1);
+  localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+  renderLocalMsgs();
+  toast('Фото удалено');
+
+  // Пытаемся также убрать из Gist (перезаписываем без этого сообщения)
+  // Делаем это в фоне, чтобы не тормозить UI
+  (async () => {
+    try {
+      if (!state.activeChat) return;
+      let current = await api.getGist(state.activeChat.id);
+      if (!current || current === 'init') return;
+
+      const lines = current.split('\n').filter(l => l.trim() && l !== 'init');
+      const newLines = [];
+      for (const line of lines) {
+        const txt = dec(line, state.activeChat.key);
+        if (!txt) {
+          newLines.push(line);
+          continue;
+        }
+        try {
+          const m = JSON.parse(txt);
+          if (String(m.ts) !== String(ts)) {
+            newLines.push(line);
+          }
+        } catch (_) {
+          newLines.push(line);
+        }
+      }
+      const newContent = newLines.join('\n') || 'init';
+      await api.updateGist(state.activeChat.id, newContent);
+    } catch (e) {
+      console.error('Не удалось удалить с сервера:', e);
+    }
+  })();
+};
 
 async function loadMessages() {
   if (!state.activeChat) return;
