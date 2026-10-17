@@ -51,17 +51,7 @@ button:active { transform: scale(0.97); opacity: 0.9; }
 .back-btn { background:none; border:none; color:var(--text-dim); width:auto; padding:5px; font-size:24px; cursor:pointer; }
 .back-btn:active { color: var(--text); }
 
-#refreshChatBtn {
-  width: 40px; height: 40px; 
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  display: flex; justify-content: center; align-items: center;
-  cursor: pointer;
-  margin-left: auto;
-  flex-shrink: 0;
-}
+#refreshChatBtn { width: 40px; height: 40px; border-radius: 50%; background: transparent; border: none; color: var(--text-dim); display: flex; justify-content: center; align-items: center; cursor: pointer; margin-left: auto; flex-shrink: 0; font-size: 20px; }
 
 #messages { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:6px; background:radial-gradient(circle at 20% 10%,rgba(0,168,132,0.04),transparent 40%); }
 
@@ -80,8 +70,6 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
 
 .btn-mini { width:48px; height:48px; border-radius:50%; background:transparent; border:none; color:var(--text-dim); display:flex; justify-content:center; align-items:center; padding:0; font-size:24px; cursor:pointer; transition: background 0.1s; }
 .btn-mini:active { background: rgba(255,255,255,0.1); }
-
-/* Кнопка отправить */
 .btn-send { width:50px; height:50px; border-radius:50%; background:var(--accent); color:#fff; border:none; display:flex; justify-content:center; align-items:center; padding:0; font-size:22px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.1s; }
 .btn-send:active { transform: scale(0.9); background: #008069; }
 
@@ -237,7 +225,7 @@ textarea { width:100%; border:none; background:transparent; padding:10px 0; font
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { user:'', seed:'', token:'', contacts:[], activeChat:null, poll:null, soundData:null, soundCtx:null };
+const state = { user:'', seed:'', token:'', contacts:[], activeChat:null, poll:null, soundData:null, soundCtx:null, localMsgs: [] };
 let settings = { sound:true, vibrate:true, notification:false };
 let knownIds = new Set();
 let isFirstLoad = true; 
@@ -392,16 +380,44 @@ async function joinContact() {
 async function openChat(id) {
   state.activeChat = state.contacts.find(c => c.id === id);
   if(!state.activeChat) return;
+  
+  // Очищаем экран и берем сообщения из памяти
   $('contacts-screen').classList.remove('active');
   $('chat-screen').classList.add('active');
   $('chat-title').innerText = state.activeChat.name;
   $('chat-avatar').innerText = state.activeChat.name.charAt(0).toUpperCase();
-  $('messages').innerHTML = '';
+  
+  // Загружаем из локального кэша
+  state.localMsgs = JSON.parse(localStorage.getItem('cc_msgs_' + state.activeChat.id) || '[]');
+  renderLocalMsgs();
+  
   knownIds.clear();
   isFirstLoad = true; 
+  
+  // Пытаемся обновить из сети
   await loadMessages();
+  
   clearInterval(state.poll);
   state.poll = setInterval(loadMessages, 4000);
+}
+
+// Отрисовка локальных сообщений
+function renderLocalMsgs() {
+  let html = '';
+  state.localMsgs.forEach(msg => {
+    let out = msg.author === state.user ? 'out' : 'in';
+    let authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
+    let time = '--:--';
+    if(msg.ts) { let d = new Date(msg.ts); if(!isNaN(d.getTime())) time = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
+    let bubble = '';
+    if(msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
+    else if(msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
+    else if(msg.type === 'pending') bubble = `<div class="msg-text">${msg.text}</div><div class="msg-time" style="color:#ffb347">Отправка...</div>`;
+    
+    html += `<div class="msg-item ${out}">${authorHtml}${bubble}<div class="msg-time">${time}</div></div>`;
+  });
+  $('messages').innerHTML = html;
+  $('messages').scrollTop = $('messages').scrollHeight;
 }
 
 async function loadMessages() {
@@ -409,28 +425,25 @@ async function loadMessages() {
   try {
     let content = await api.getGist(state.activeChat.id);
     let lines = content.split('\n').filter(l => l.trim() && l !== 'init');
-    let html = '';
-    for(let line of lines) {
+    
+    // Добавляем новые сообщения к локальным
+    lines.forEach(line => {
       let txt = dec(line, state.activeChat.key);
-      if(!txt) continue;
+      if(!txt) return;
       try {
         let msg = JSON.parse(txt);
-        if(!knownIds.has(msg.ts)) {
-          knownIds.add(msg.ts);
+        if(!state.localMsgs.find(m => m.ts === msg.ts)) {
+          state.localMsgs.push(msg);
           if(!isFirstLoad && msg.author !== state.user) { playNotify(); vibrate(); showNotify(msg.text || 'Медиа'); }
         }
-        let out = msg.author === state.user ? 'out' : 'in';
-        let authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
-        let time = '--:--';
-        if(msg.ts) { let d = new Date(msg.ts); if(!isNaN(d.getTime())) time = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
-        let bubble = '';
-        if(msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
-        else if(msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
-        html += `<div class="msg-item ${out}">${authorHtml}${bubble}<div class="msg-time">${time}</div></div>`;
       } catch(e) {}
-    }
-    $('messages').innerHTML = html;
-    $('messages').scrollTop = $('messages').scrollHeight;
+    });
+
+    // Сортируем и сохраняем
+    state.localMsgs.sort((a,b) => a.ts - b.ts);
+    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+    
+    renderLocalMsgs();
     isFirstLoad = false; 
   } catch(e) { console.error(e); }
 }
@@ -439,28 +452,32 @@ async function sendMessage() {
   let text = $('msgInput').value.trim();
   if(!text || !state.activeChat) return;
   
-  // Мгновенно очищаем поле и показываем сообщение
+  // 1. Мгновенно очищаем поле
   $('msgInput').value = ''; 
-  let msg = { author: state.user, type: 'text', text, ts: Date.now() };
-  let tempMsgHtml = `<div class="msg-item out"><div class="msg-text">${text}</div><div class="msg-time">Отправка...</div></div>`;
-  $('messages').insertAdjacentHTML('beforeend', tempMsgHtml);
-  $('messages').scrollTop = $('messages').scrollHeight;
   
+  // 2. Создаем сообщение со статусом "Отправка" и сохраняем в память
+  let msg = { author: state.user, type: 'text', text, ts: Date.now() };
+  state.localMsgs.push(msg);
+  renderLocalMsgs();
+  
+  // 3. Пытаемся отправить на сервер
   try {
     let cipher = enc(JSON.stringify(msg), state.activeChat.key);
     let current = await api.getGist(state.activeChat.id);
     if(current === 'init') current = '';
     let newContent = current ? current + '\n' + cipher : cipher;
     await api.updateGist(state.activeChat.id, newContent);
+    
+    // Если отправилось, обновляем локальную память
+    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
     await loadMessages();
   } catch(e) { 
-    toast('Ошибка: ' + e.message); 
-    $('msgInput').value = text; 
-    await loadMessages(); 
+    toast('Ошибка отправки. Сообщение сохранено локально.');
+    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+    renderLocalMsgs();
   }
 }
 
-// Обработка нажатия на Enter
 document.getElementById('msgInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -501,7 +518,6 @@ $('settingsBtn').onclick = () => $('settingsPanel').classList.add('show');
 $('closeSettingsBtn').onclick = () => $('settingsPanel').classList.remove('show');
 $('logoutBtn').onclick = () => { localStorage.removeItem('cc_seed'); location.reload(); };
 
-// Привязка кнопки отправки
 $('sendBtn').onclick = sendMessage;
 
 $('attachBtn').onclick = () => $('fileInput').click();
@@ -509,15 +525,18 @@ $('fileInput').onchange = e => {
   let f = e.target.files[0]; if(!f || !state.activeChat) return;
   let reader = new FileReader();
   reader.onload = async ev => {
-    $('attachBtn').disabled = true;
     let msg = { author: state.user, type: 'photo', data: ev.target.result, ts: Date.now() };
-    let cipher = enc(JSON.stringify(msg), state.activeChat.key);
-    let current = await api.getGist(state.activeChat.id);
-    if(current === 'init') current = '';
-    let newContent = current ? current + '\n' + cipher : cipher;
-    await api.updateGist(state.activeChat.id, newContent);
-    await loadMessages();
-    $('attachBtn').disabled = false;
+    state.localMsgs.push(msg);
+    renderLocalMsgs();
+    try {
+      let cipher = enc(JSON.stringify(msg), state.activeChat.key);
+      let current = await api.getGist(state.activeChat.id);
+      if(current === 'init') current = '';
+      let newContent = current ? current + '\n' + cipher : cipher;
+      await api.updateGist(state.activeChat.id, newContent);
+      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+      await loadMessages();
+    } catch(err) { toast('Ошибка загрузки фото'); }
   };
   reader.readAsDataURL(f); e.target.value='';
 };
