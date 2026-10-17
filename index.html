@@ -312,6 +312,12 @@ button:active { transform:scale(0.97); opacity:0.9; }
   display:block;
   margin-top:5px;
 }
+.msg-status {
+  font-size:10px;
+  color:#ffb347;
+  text-align:right;
+  margin-top:2px;
+}
 
 .input-area {
   padding:8px 10px;
@@ -373,19 +379,14 @@ textarea {
   font-size:22px;
   cursor:pointer;
   box-shadow:0 2px 8px rgba(0,0,0,0.3);
-  transition:transform 0.1s;
+  transition:transform 0.1s, opacity 0.15s;
 }
 .btn-send:active {
   transform:scale(0.9);
   background:#008069;
 }
-
-/* Disabled state for send/attach */
-.btn-send:disabled,
-.btn-mini:disabled {
-  opacity:0.45 !important;
-  pointer-events:none;
-  cursor:not-allowed;
+.btn-send.sending {
+  opacity:0.7;
 }
 
 .modal {
@@ -491,7 +492,6 @@ textarea {
 <body>
 
 <div class="container">
-  <!-- LOGIN -->
   <div id="login-screen">
     <div class="login-logo">🔐</div>
     <h2 style="text-align:center;margin-bottom:20px;">Secure Contacts</h2>
@@ -528,7 +528,6 @@ textarea {
     <button type="button" id="loginBtn">Войти</button>
   </div>
 
-  <!-- CONTACTS -->
   <div id="contacts-screen">
     <div class="main-header">
       <h2>Чаты</h2>
@@ -540,7 +539,6 @@ textarea {
     <div id="contacts-list"></div>
   </div>
 
-  <!-- CHAT -->
   <div id="chat-screen">
     <div class="header">
       <button class="back-btn" id="backBtn">←</button>
@@ -560,7 +558,6 @@ textarea {
     </div>
   </div>
 
-  <!-- SETTINGS -->
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-card">
       <h3>Настройки</h3>
@@ -608,7 +605,6 @@ textarea {
   </div>
 </div>
 
-<!-- MODALS -->
 <div class="modal" id="addModal">
   <div class="modal-content">
     <h3>Новый контакт</h3>
@@ -671,6 +667,7 @@ let settings = { sound: true, vibrate: true, notification: false };
 let isFirstLoad = true;
 let contactToDeleteIndex = -1;
 let isSending = false;
+let sendQueue = [];
 
 const toast = (msg) => {
   const t = $('toast');
@@ -688,7 +685,6 @@ const dec = (cipher, key) => {
   }
 };
 
-// ========== НАДЁЖНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ВИДИМОСТИ ПАРОЛЯ ==========
 function setupPasswordToggle(inputId, btnId) {
   const input = $(inputId);
   const btn = $(btnId);
@@ -697,9 +693,7 @@ function setupPasswordToggle(inputId, btnId) {
   const eyeOpen = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
   const eyeClosed = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
 
-  btn.addEventListener('click', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
+  function toggle() {
     const svg = btn.querySelector('svg');
     if (input.type === 'password') {
       input.type = 'text';
@@ -708,10 +702,20 @@ function setupPasswordToggle(inputId, btnId) {
       input.type = 'password';
       svg.innerHTML = eyeOpen;
     }
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
   });
+  btn.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  }, { passive: false });
 }
 
-// Звук
 function initSound() {
   if (!state.soundCtx) {
     try {
@@ -758,7 +762,6 @@ function showNotify(body) {
   } catch (e) {}
 }
 
-// Настройки
 $('toggleSound').addEventListener('change', e => {
   settings.sound = e.target.checked;
   localStorage.setItem('cc_sound', settings.sound);
@@ -795,7 +798,6 @@ $('inputHeightSelect').addEventListener('change', e => {
   localStorage.setItem('cc_height', e.target.value);
 });
 
-// API GitHub Gists
 const api = {
   headers: () => ({
     'Authorization': `token ${state.token}`,
@@ -933,10 +935,10 @@ async function openChat(id) {
   renderLocalMsgs();
 
   isFirstLoad = true;
-  await loadMessages();
+  loadMessages();
 
   clearInterval(state.poll);
-  state.poll = setInterval(loadMessages, 4000);
+  state.poll = setInterval(loadMessages, 5000);
 }
 
 function renderLocalMsgs() {
@@ -952,9 +954,13 @@ function renderLocalMsgs() {
     let bubble = '';
     if (msg.type === 'text') bubble = `<div class="msg-text">${msg.text}</div>`;
     else if (msg.type === 'photo') bubble = `<img class="msg-photo" src="${msg.data}">`;
-    else if (msg.type === 'pending') bubble = `<div class="msg-text">${msg.text}</div><div class="msg-time" style="color:#ffb347">Отправка...</div>`;
 
-    html += `<div class="msg-item ${out}">${authorHtml}${bubble}<div class="msg-time">${time}</div></div>`;
+    let statusHtml = '';
+    if (out && msg.pending) {
+      statusHtml = `<div class="msg-status">Отправка...</div>`;
+    }
+
+    html += `<div class="msg-item ${out}">${authorHtml}${bubble}<div class="msg-time">${time}</div>${statusHtml}</div>`;
   });
   $('messages').innerHTML = html;
   $('messages').scrollTop = $('messages').scrollHeight;
@@ -966,6 +972,7 @@ async function loadMessages() {
     const content = await api.getGist(state.activeChat.id);
     const lines = content.split('\n').filter(l => l.trim() && l !== 'init');
 
+    let hasNew = false;
     lines.forEach(line => {
       const txt = dec(line, state.activeChat.key);
       if (!txt) return;
@@ -973,78 +980,96 @@ async function loadMessages() {
         const msg = JSON.parse(txt);
         if (!state.localMsgs.find(m => m.ts === msg.ts)) {
           state.localMsgs.push(msg);
+          hasNew = true;
           if (!isFirstLoad && msg.author !== state.user) {
             playNotify();
             vibrate();
             showNotify(msg.text || 'Медиа');
           }
+        } else {
+          const local = state.localMsgs.find(m => m.ts === msg.ts);
+          if (local && local.pending) {
+            local.pending = false;
+            hasNew = true;
+          }
         }
       } catch (e) {}
     });
 
-    state.localMsgs.sort((a, b) => a.ts - b.ts);
-    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
-    renderLocalMsgs();
+    if (hasNew) {
+      state.localMsgs.sort((a, b) => a.ts - b.ts);
+      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+      renderLocalMsgs();
+    }
     isFirstLoad = false;
   } catch (e) {
     console.error(e);
   }
 }
 
-// ========== ОТПРАВКА СООБЩЕНИЙ (с защитой от повторных нажатий) ==========
-async function sendMessage() {
-  if (isSending) return;
-  const text = $('msgInput').value.trim();
-  if (!text || !state.activeChat) return;
+async function processQueue() {
+  if (isSending || sendQueue.length === 0 || !state.activeChat) return;
 
   isSending = true;
   const sendBtn = $('sendBtn');
-  const attachBtn = $('attachBtn');
-  sendBtn.disabled = true;
-  attachBtn.disabled = true;
+  sendBtn.classList.add('sending');
 
-  const originalText = text;
-  $('msgInput').value = '';
-
-  const msg = {
-    author: state.user,
-    type: 'text',
-    text: originalText,
-    ts: Date.now()
-  };
-
-  state.localMsgs.push(msg);
-  renderLocalMsgs();
+  const item = sendQueue.shift();
 
   try {
-    const cipher = enc(JSON.stringify(msg), state.activeChat.key);
+    const cipher = enc(JSON.stringify(item.msg), state.activeChat.key);
     let current = await api.getGist(state.activeChat.id);
     if (current === 'init') current = '';
     const newContent = current ? current + '\n' + cipher : cipher;
     await api.updateGist(state.activeChat.id, newContent);
 
-    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
-    await loadMessages();
-  } catch (e) {
-    toast('Ошибка отправки. Сообщение сохранено локально.');
+    const local = state.localMsgs.find(m => m.ts === item.msg.ts);
+    if (local) local.pending = false;
     localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
     renderLocalMsgs();
+  } catch (e) {
+    console.error(e);
+    toast('Ошибка сети. Попробуем ещё раз...');
+    sendQueue.unshift(item);
   } finally {
     isSending = false;
-    sendBtn.disabled = false;
-    attachBtn.disabled = false;
+    sendBtn.classList.remove('sending');
+
+    if (sendQueue.length > 0) {
+      setTimeout(processQueue, 400);
+    }
   }
 }
 
-// Enter
+function sendMessage() {
+  const text = $('msgInput').value.trim();
+  if (!text || !state.activeChat) return;
+
+  $('msgInput').value = '';
+
+  const msg = {
+    author: state.user,
+    type: 'text',
+    text: text,
+    ts: Date.now(),
+    pending: true
+  };
+
+  state.localMsgs.push(msg);
+  localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
+  renderLocalMsgs();
+
+  sendQueue.push({ msg });
+  processQueue();
+}
+
 $('msgInput').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    if (!isSending) sendMessage();
+    sendMessage();
   }
 });
 
-// ========== КНОПКА ВХОДА ==========
 $('loginBtn').addEventListener('click', function () {
   state.user = $('userName').value.trim();
   state.seed = $('seedPhrase').value.trim();
@@ -1068,7 +1093,6 @@ $('loginBtn').addEventListener('click', function () {
   loadContacts();
 });
 
-// Остальные кнопки
 $('addContactBtn').onclick = () => $('addModal').classList.add('show');
 $('closeModalBtn').onclick = () => $('addModal').classList.remove('show');
 $('closeInviteBtn').onclick = () => $('inviteModal').classList.remove('show');
@@ -1083,6 +1107,8 @@ $('doJoinBtn').onclick = joinContact;
 $('backBtn').onclick = () => {
   clearInterval(state.poll);
   state.activeChat = null;
+  sendQueue = [];
+  isSending = false;
   $('chat-screen').classList.remove('active');
   $('contacts-screen').classList.add('active');
 };
@@ -1100,64 +1126,40 @@ $('logoutBtn').onclick = () => {
 
 $('sendBtn').onclick = sendMessage;
 
-// Прикрепление файлов
 $('attachBtn').onclick = () => {
-  if (isSending || !state.activeChat) return;
+  if (!state.activeChat) return;
   $('fileInput').click();
 };
 
 $('fileInput').onchange = e => {
   const f = e.target.files[0];
-  if (!f || !state.activeChat || isSending) return;
-
-  isSending = true;
-  const sendBtn = $('sendBtn');
-  const attachBtn = $('attachBtn');
-  sendBtn.disabled = true;
-  attachBtn.disabled = true;
+  if (!f || !state.activeChat) return;
 
   const reader = new FileReader();
-  reader.onload = async ev => {
+  reader.onload = ev => {
     const msg = {
       author: state.user,
       type: 'photo',
       data: ev.target.result,
-      ts: Date.now()
+      ts: Date.now(),
+      pending: true
     };
 
     state.localMsgs.push(msg);
+    localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
     renderLocalMsgs();
 
-    try {
-      const cipher = enc(JSON.stringify(msg), state.activeChat.key);
-      let current = await api.getGist(state.activeChat.id);
-      if (current === 'init') current = '';
-      const newContent = current ? current + '\n' + cipher : cipher;
-      await api.updateGist(state.activeChat.id, newContent);
-
-      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
-      await loadMessages();
-    } catch (err) {
-      toast('Ошибка загрузки фото');
-      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
-      renderLocalMsgs();
-    } finally {
-      isSending = false;
-      sendBtn.disabled = false;
-      attachBtn.disabled = false;
-    }
+    sendQueue.push({ msg });
+    processQueue();
   };
   reader.readAsDataURL(f);
   e.target.value = '';
 };
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
 window.addEventListener('DOMContentLoaded', () => {
-  // Надёжные глазки
   setupPasswordToggle('seedPhrase', 'toggleSeedBtn');
   setupPasswordToggle('ghToken', 'toggleTokenBtn');
 
-  // Восстановление сохранённых данных
   if (localStorage.getItem('cc_user')) $('userName').value = localStorage.getItem('cc_user');
   if (localStorage.getItem('cc_token')) $('ghToken').value = localStorage.getItem('cc_token');
 
@@ -1182,11 +1184,9 @@ window.addEventListener('DOMContentLoaded', () => {
     $('msgInput').style.height = localStorage.getItem('cc_height') + 'px';
   }
 
-  // Авто-вход, если пароль запомнен
   if (localStorage.getItem('cc_seed')) {
     $('seedPhrase').value = localStorage.getItem('cc_seed');
     $('rememberMe').checked = true;
-    // Небольшой таймаут, чтобы всё успело проинициализироваться
     setTimeout(() => {
       $('loginBtn').click();
     }, 100);
