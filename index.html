@@ -176,7 +176,7 @@ const $ = id => document.getElementById(id);
 const state = { user:'', seed:'', token:'', contacts:[], activeChat:null, poll:null, soundData:null, soundCtx:null };
 let settings = { sound:true, vibrate:true, notification:false };
 let knownIds = new Set();
-let isFirstLoad = true; // Флаг: загружаем чат впервые
+let isFirstLoad = true; 
 
 const toast = (msg) => { $('toast').innerText = msg; $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'), 3000); };
 const enc = (text, key) => CryptoJS.AES.encrypt(text, key).toString();
@@ -225,8 +225,8 @@ $('inputHeightSelect').addEventListener('change', (e) => {
 // --- GITHUB API ---
 const api = {
   headers: () => ({ 'Authorization': `token ${state.token}`, 'Content-Type': 'application/json' }),
-  createGist: async (content) => {
-    let res = await fetch('https://api.github.com/gists', { method: 'POST', headers: api.headers(), body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content } } }) });
+  createGist: async () => {
+    let res = await fetch('https://api.github.com/gists', { method: 'POST', headers: api.headers(), body: JSON.stringify({ description: 'Secure Chat', public: false, files: { 'chat.txt': { content: '' } } }) });
     if(!res.ok) throw new Error('Ошибка создания');
     return (await res.json()).id;
   },
@@ -263,7 +263,7 @@ async function createContact() {
   try {
     let newSeed = Math.random().toString(36).substring(2, 12);
     toast('Создаём чат...');
-    let gistId = await api.createGist('init');
+    let gistId = await api.createGist();
     let inviteCode = btoa(JSON.stringify({ id: gistId, key: newSeed }));
     
     state.contacts.push({ name, id: gistId, key: newSeed });
@@ -305,7 +305,7 @@ async function openChat(id) {
   $('messages').innerHTML = '';
   
   knownIds.clear();
-  isFirstLoad = true; // При входе в чат звук не играет
+  isFirstLoad = true; 
   
   await loadMessages();
   clearInterval(state.poll);
@@ -325,7 +325,6 @@ async function loadMessages() {
       try {
         let msg = JSON.parse(txt);
         
-        // Логика звука: играем, только если сообщение новое И это не первая загрузка чата
         if(!knownIds.has(msg.ts)) {
           knownIds.add(msg.ts);
           if(!isFirstLoad && msg.author !== state.user) { 
@@ -336,7 +335,6 @@ async function loadMessages() {
         let out = msg.author === state.user ? 'out' : 'in';
         let authorHtml = out ? '' : `<div class="msg-author">${msg.author}</div>`;
         
-        // Проверка на валидную дату
         let time = '--:--';
         if(msg.ts) {
           let d = new Date(msg.ts);
@@ -354,7 +352,7 @@ async function loadMessages() {
     }
     $('messages').innerHTML = html;
     $('messages').scrollTop = $('messages').scrollHeight;
-    isFirstLoad = false; // После первой загрузки ставим false
+    isFirstLoad = false; 
   } catch(e) { console.error(e); }
 }
 
