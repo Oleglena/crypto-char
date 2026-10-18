@@ -433,60 +433,47 @@ button:active { transform:scale(0.97); opacity:0.9; }
   padding-bottom:calc(8px + env(safe-area-inset-bottom));
   background:var(--panel2);
   display:flex;
-  gap:8px;
-  align-items:flex-end;
-}
-.input-side-btns {
-  display:flex;
-  flex-direction:column;
   gap:6px;
-  flex-shrink:0;
+  align-items:flex-end;
 }
 .input-wrapper {
   flex:1;
   background:var(--panel3);
-  border-radius:18px;
+  border-radius:22px;
   display:flex;
   align-items:center;
-  padding:8px 14px;
+  padding:4px 12px;
   min-width:0;
-  min-height:48px;
 }
 textarea {
   width:100%;
   border:none;
   background:transparent;
-  padding:6px 0;
-  font-size:16px;
+  padding:10px 0;
+  font-size:15px;
   resize:none;
-  max-height:120px;
-  min-height:28px;
+  max-height:100px;
   color:var(--text);
   outline:none;
   font-family:inherit;
-  line-height:1.35;
 }
 
 .btn-mini {
-  width:40px;
-  height:40px;
-  border-radius:12px;
-  background:var(--panel3);
-  border:1px solid var(--border);
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  background:transparent;
+  border:none;
   color:var(--text-dim);
   display:flex;
   justify-content:center;
   align-items:center;
   padding:0;
-  font-size:18px;
+  font-size:24px;
   cursor:pointer;
-  transition:background 0.15s, transform 0.1s, color 0.15s;
+  transition:background 0.1s;
 }
-.btn-mini:active {
-  background:var(--accent);
-  color:#fff;
-  transform:scale(0.94);
-}
+.btn-mini:active { background:rgba(255,255,255,0.1); }
 .btn-send {
   width:50px;
   height:50px;
@@ -508,70 +495,6 @@ textarea {
   background:#008069;
 }
 .btn-send.sending { opacity:0.7; }
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.voice-msg {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 180px;
-  padding: 4px 0;
-}
-.voice-play-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: #fff;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.msg-item.in .voice-play-btn {
-  background: rgba(0,0,0,0.15);
-  color: var(--text);
-}
-.voice-wave {
-  flex: 1;
-  height: 4px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 2px;
-  position: relative;
-  overflow: hidden;
-}
-.msg-item.in .voice-wave {
-  background: rgba(0,0,0,0.12);
-}
-.voice-wave-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 0%;
-  background: rgba(255,255,255,0.8);
-  border-radius: 2px;
-  transition: width 0.1s linear;
-}
-.msg-item.in .voice-wave-fill {
-  background: var(--accent);
-}
-.voice-duration {
-  font-size: 12px;
-  opacity: 0.8;
-  min-width: 36px;
-  text-align: right;
-}
-#micBtn.recording {
-  color: #ff4757;
-  animation: blink 1s infinite;
-}
 
 .modal {
   display:none;
@@ -771,20 +694,11 @@ textarea {
     </div>
     <div id="messages"></div>
     <div class="input-area">
-      <div class="input-side-btns">
-        <button class="btn-mini" id="attachBtn" title="Фото">📎</button>
-        <button class="btn-mini" id="micBtn" title="Голосовое">🎤</button>
-      </div>
+      <button class="btn-mini" id="attachBtn">📎</button>
       <div class="input-wrapper">
         <textarea id="msgInput" placeholder="Сообщение..." rows="1"></textarea>
       </div>
       <button class="btn-send" id="sendBtn">➤</button>
-    </div>
-    <div id="recordingBar" style="display:none; padding:10px 14px; background:var(--panel2); align-items:center; gap:12px; border-top:1px solid var(--border);">
-      <div id="recDot" style="width:12px;height:12px;border-radius:50%;background:#ff4757;animation:blink 1s infinite;"></div>
-      <span id="recTime" style="font-size:15px;font-weight:600;min-width:48px;">0:00</span>
-      <button id="recCancel" style="background:var(--panel3);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;width:auto;">Отмена</button>
-      <button id="recSend" style="background:var(--accent);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;width:auto;margin-left:auto;">Отправить</button>
     </div>
   </div>
 
@@ -1231,15 +1145,6 @@ function renderLocalMsgs() {
             <button class="photo-action-btn delete" onclick="event.stopPropagation(); deletePhoto('${msg.ts}')" title="Удалить">🗑️</button>
           </div>
         </div>`;
-    } else if (msg.type === 'voice') {
-      const dur = msg.duration ? formatDuration(msg.duration) : '0:00';
-      bubble = `
-        <div class="voice-msg" data-ts="${msg.ts}">
-          <button class="voice-play-btn" onclick="toggleVoice(this, '${msg.ts}')">▶</button>
-          <div class="voice-wave"><div class="voice-wave-fill"></div></div>
-          <span class="voice-duration">${dur}</span>
-          <audio src="${msg.data}" preload="metadata" style="display:none;"></audio>
-        </div>`;
     }
 
     let statusHtml = '';
@@ -1654,129 +1559,6 @@ $('fileInput').onchange = e => {
   };
   reader.readAsDataURL(f);
   e.target.value = '';
-};
-
-// ========== ГОЛОСОВЫЕ СООБЩЕНИЯ ==========
-let mediaRecorder = null;
-let audioChunks = [];
-let recStartTime = 0;
-let recTimer = null;
-let isRecording = false;
-
-function formatDuration(sec) {
-  sec = Math.floor(sec || 0);
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return m + ':' + (s < 10 ? '0' : '') + s;
-}
-
-function updateRecTime() {
-  const elapsed = (Date.now() - recStartTime) / 1000;
-  $('recTime').innerText = formatDuration(elapsed);
-}
-
-async function startRecording() {
-  if (isRecording || !state.activeChat) return;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.start(200);
-    isRecording = true;
-    recStartTime = Date.now();
-    $('recordingBar').style.display = 'flex';
-    $('micBtn').classList.add('recording');
-    recTimer = setInterval(updateRecTime, 250);
-    updateRecTime();
-  } catch (err) {
-    console.error(err);
-    toast('Нет доступа к микрофону');
-  }
-}
-
-function stopRecording(send) {
-  if (!isRecording || !mediaRecorder) return;
-  isRecording = false;
-  clearInterval(recTimer);
-  $('recordingBar').style.display = 'none';
-  $('micBtn').classList.remove('recording');
-
-  mediaRecorder.onstop = () => {
-    mediaRecorder.stream.getTracks().forEach(t => t.stop());
-    if (!send || audioChunks.length === 0) {
-      audioChunks = [];
-      return;
-    }
-    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-    const duration = (Date.now() - recStartTime) / 1000;
-    audioChunks = [];
-
-    if (duration < 0.5) {
-      toast('Слишком короткое сообщение');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const msg = {
-        author: state.user,
-        type: 'voice',
-        data: ev.target.result,
-        duration: duration,
-        ts: Date.now(),
-        pending: true
-      };
-      state.localMsgs.push(msg);
-      localStorage.setItem('cc_msgs_' + state.activeChat.id, JSON.stringify(state.localMsgs));
-      renderLocalMsgs();
-      sendQueue.push({ msg });
-      processQueue();
-    };
-    reader.readAsDataURL(blob);
-  };
-  mediaRecorder.stop();
-}
-
-$('micBtn').addEventListener('click', function(e) {
-  e.preventDefault();
-  if (isRecording) return;
-  startRecording();
-});
-$('recCancel').onclick = () => stopRecording(false);
-$('recSend').onclick = () => stopRecording(true);
-
-// Воспроизведение голосовых
-let currentAudio = null;
-window.toggleVoice = function(btn, ts) {
-  const wrap = btn.closest('.voice-msg');
-  const audio = wrap.querySelector('audio');
-  const fill = wrap.querySelector('.voice-wave-fill');
-  if (!audio) return;
-
-  if (currentAudio && currentAudio !== audio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-    document.querySelectorAll('.voice-play-btn').forEach(b => b.innerText = '▶');
-    document.querySelectorAll('.voice-wave-fill').forEach(f => f.style.width = '0%');
-  }
-
-  if (audio.paused) {
-    audio.play();
-    btn.innerText = '⏸';
-    currentAudio = audio;
-    audio.ontimeupdate = () => {
-      if (audio.duration) fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
-    };
-    audio.onended = () => {
-      btn.innerText = '▶';
-      fill.style.width = '0%';
-      currentAudio = null;
-    };
-  } else {
-    audio.pause();
-    btn.innerText = '▶';
-  }
 };
 
 window.addEventListener('DOMContentLoaded', () => {
