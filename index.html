@@ -1442,9 +1442,7 @@ function sendMessage() {
 $('msgInput').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    isSending = false;
     sendMessage();
-    this.blur();
   }
 });
 
@@ -1502,39 +1500,16 @@ $('logoutBtn').onclick = () => {
   location.reload();
 };
 
-// Максимально надёжная отправка на мобильных.
-// touchstart/pointerdown срабатывают ДО того, как браузер закроет клавиатуру.
-function doSend(e) {
-  if (e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-  isSending = false;
+$('sendBtn').onclick = function() {
+  isSending = false; // на всякий случай сбрасываем
   sendMessage();
-  // Клавиатуру закрываем чуть позже, уже после постановки сообщения в очередь
-  setTimeout(function() {
-    if ($('msgInput')) $('msgInput').blur();
-  }, 40);
-}
+};
 
-var sendBtnEl = $('sendBtn');
-sendBtnEl.addEventListener('pointerdown', doSend);
-sendBtnEl.addEventListener('touchstart', doSend, { passive: false });
-sendBtnEl.addEventListener('click', doSend);
-
-function doAttach(e) {
-  if (e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
+$('attachBtn').onclick = function() {
   if (!state.activeChat) return;
   isSending = false;
   $('fileInput').click();
-}
-var attachBtnEl = $('attachBtn');
-attachBtnEl.addEventListener('pointerdown', doAttach);
-attachBtnEl.addEventListener('touchstart', doAttach, { passive: false });
-attachBtnEl.addEventListener('click', doAttach);
+};
 
 $('fileInput').onchange = e => {
   const f = e.target.files[0];
